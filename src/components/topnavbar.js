@@ -204,11 +204,16 @@ function TopNavbar() {
             {/* <a className="dropdown-item" href="#">
               <i className="fas fa-cogs fa-sm fa-fw mr-2 text-gray-400"></i>
               Settings
-            </a>
-            <a className="dropdown-item" href="#">
-              <i className="fas fa-list fa-sm fa-fw mr-2 text-gray-400"></i>
-              Activity Log
-            </a> */}
+            </a>*/}
+            {/* <a className="dropdown-item" href="#">
+              <i className="fas fa-list fa-sm fa-fw mr-2 text-gray-400" to={{ pathname: "/employee"}} state={data}></i>
+              Profile
+            </a>  */}
+            {userRole === 'Employee' && (
+            <Link className="dropdown-item" to={{ pathname: "/employee"}} state={data}>
+                <i className="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
+                <span>Profile</span>
+              </Link>)}
             <div className="dropdown-divider"></div>
             <a className="dropdown-item" data-toggle="modal" onClick={handleLogout}>
               <i className="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>

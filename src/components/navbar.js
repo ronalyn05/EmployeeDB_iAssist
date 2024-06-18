@@ -54,6 +54,8 @@ import { useState } from "react";
                      <img src="/img/hris2.png" alt="companyLogo" className="logo2" />
                  </div>
              </a>
+             {RoleType !== "Employee" && (
+        <>
              {/* Divider */}
              <hr className="sidebar-divider my-0" />
              {/* Nav Item - Dashboard */}
@@ -66,8 +68,8 @@ import { useState } from "react";
               {/* Divider */}
               <hr className="sidebar-divider" />
       {/* Conditionally render Employee DB section */}
-      {RoleType !== "Employee" && (
-        <>
+      {/* {RoleType !== "Employee" && (
+        <> */}
           {/* Heading */}
           <div className="sidebar-heading">
             Employee DB

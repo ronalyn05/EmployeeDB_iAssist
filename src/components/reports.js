@@ -63,7 +63,7 @@ const Reports = () => {
 useEffect(() => {
   async function fetchData() {
     try {
-      const response = await fetch("/newHireEmp");
+      const response = await fetch("/retrieveReports");
       if (!response.ok) {
         throw new Error("Failed to fetch data");
       }
@@ -96,6 +96,27 @@ useEffect(() => {
 
   fetchData();
 }, []);
+
+const getStatusColor = (status) => {
+  switch (status) {
+    case "Active":
+      return "text-success"; // Green color for Active status
+    case "Separated":
+      return "text-danger"; // Red color for Separated status
+    case "Inactive - Maternity":
+      return "text-primary";
+    case "Inactive - Sickness":
+      return "text-primary";
+    case "Inactive - Absent Without Leave":
+      return "text-danger";
+    case "Inactive - Absent With Leave":
+      return "text-info";
+    case "Inactive - Suspension":
+      return "text-warning"; // Gray color for other inactive statuses
+    default:
+      return ""; // Default color if status doesn't match
+  }
+};
 
 
   return (
@@ -227,7 +248,12 @@ useEffect(() => {
                                   <td>{employee.EmployeeId}</td>
                                   <td>{employee.EmployeeName}</td>
                                   <td>{employee.Facility}</td>
-                                  <td>{employee.EmployeeStatus}</td>
+                                  {/* <td>{employee.EmployeeStatus}</td> */}
+                                  <td>
+                                      <span className={getStatusColor(employee.EmployeeStatus)}>
+                                        {employee.EmployeeStatus}
+                                      </span>
+                                    </td>
                                   <td>{employee.EmploymentStatus}</td>
                                   <td>{employee.DateHired}</td>
                                   <td>{employee.EmployeeRole}</td>
