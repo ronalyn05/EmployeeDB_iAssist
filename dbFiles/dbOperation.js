@@ -543,11 +543,14 @@ const getAllEmployees = async () => {
     ADDRESS.IsEmergency AS Is_Emergency,
     CONTACT.ContactNumber AS EmContactPhoneNumber,
     EDUC.*,
-    EC.*,        
+    EC.*,    
+    SHFT.*,
+    COMPBEN.*,
+    DEPDNT.*,   
     DU.DUCode,
     DU.DUName AS DUName,
     DEPT.DepartmentName,
-    PROD.ProdId
+    PROD.*
 FROM (
     SELECT DISTINCT EmployeeId FROM EmpPersonalDetails
 ) AS DistinctEmployeeIds
@@ -559,11 +562,10 @@ INNER JOIN Education AS EDUC ON PD.EmployeeId = EDUC.EmployeeId
 LEFT JOIN EmergencyContactNumber AS EC ON PD.EmployeeId = EC.EmployeeId
 LEFT JOIN DeliveryUnit AS DU ON PD.EmployeeId = DU.EmployeeId
 LEFT JOIN Department AS DEPT ON PD.EmployeeId = DEPT.EmployeeId
-LEFT JOIN (
-    SELECT EmployeeId, STRING_AGG(ProdId, ',') AS ProdId
-    FROM Product
-    GROUP BY EmployeeId
-) AS PROD ON PD.EmployeeId = PROD.EmployeeId;
+LEFT JOIN Shift AS SHFT ON PD.EmployeeId = SHFT.EmployeeId
+LEFT JOIN CompensationBenefits AS COMPBEN ON PD.EmployeeId = COMPBEN.EmployeeId
+LEFT JOIN Dependent AS DEPDNT ON PD.EmployeeId = DEPDNT.EmployeeId
+LEFT JOIN Product AS PROD ON PD.EmployeeId = PROD.EmployeeId;
     `);
   //   SELECT 
   //   PD.EmployeeId,
@@ -640,63 +642,6 @@ LEFT JOIN (
   }
 };
 
-// const getAllEmployees = async () => {
-//   try {
-//     let pool = await sql.connect(config);
-//     let result = await pool.request().query(`
-//       SELECT 
-//         PD.*, PD.EmployeeId, EI.*, ADDRESS.*, CONTACT.*, EDUC.*, EC.*,
-//         PROJ.ProjectId AS ProjectId, PROJ.DUID AS ProjectDUID, PROJ.ProjectCode, 
-//         PROJ.ProjectName, PROJ.is_Active,
-//         DU.DUID AS DUID, DU.DUCode, DU.DUName AS DUName, DU.Is_Active,
-//         DEPT.DepartmentId, DEPT.DepartmentName, DEPT.DUID AS DeptDUID,
-//         PROD.*, SHFT.*, COMPBEN.*, DEPDNT .*,
-//         C.ContactNumber AS EmContactPhoneNumber,
-//         A.CompleteAddress AS EmContactCompleteAddress,
-//         A.HouseNumber AS EmContactHouseNo,
-//         A.Barangay AS EmContactBarangay,
-//         A.CityMunicipality AS EmContactCityMunicipality,
-//         A.Province AS EmContactProvince,
-//         A.Region AS EmContactRegion,
-//         A.Country AS EmContactCountry,
-//         A.ZipCode AS EmContactZipcode,
-//         A.LandMark AS EmContactLandMark,
-//         A.IsPermanent AS Is_Permanent,
-//         A.IsEmergency AS Is_Emergency
-
-//       FROM EmpPersonalDetails AS PD
-//       INNER JOIN EmployeeInfo AS EI ON PD.EmployeeId = EI.EmployeeId
-//       INNER JOIN Address AS ADDRESS ON PD.EmployeeId = ADDRESS.EmployeeId
-//       INNER JOIN Contact AS CONTACT ON PD.EmployeeId = CONTACT.EmployeeId
-//       INNER JOIN Education AS EDUC ON PD.EmployeeId = EDUC.EmployeeId
-//       LEFT JOIN EmergencyContactNumber AS EC ON PD.EmployeeId = EC.EmployeeId
-//       INNER JOIN Contact AS C ON EC.ContactId = C.ContactId
-//       INNER JOIN Address AS A ON EC.AddressID = A.AddressID
-//       LEFT JOIN Project AS PROJ ON PD.EmployeeId = PROJ.EmployeeId
-//       LEFT JOIN Shift AS SHFT ON PD.EmployeeId = SHFT.EmployeeId
-//       LEFT JOIN DeliveryUnit AS DU ON PD.EmployeeId = DU.EmployeeId
-//       LEFT JOIN Department AS DEPT ON PD.EmployeeId = DEPT.EmployeeId
-//       LEFT JOIN Product AS PROD ON PD.EmployeeId = PROD.EmployeeId
-//       LEFT JOIN CompensationBenefits AS COMPBEN ON PD.EmployeeId = COMPBEN.EmployeeId
-//       LEFT JOIN Dependent AS DEPDNT ON PD.EmployeeId = DEPDNT.EmployeeId;
-//     `);
-//        // Filter out duplicate employees based on EmployeeId
-//        const employees = result.recordset.reduce((acc, employee) => {
-//         if (!acc[employee.EmployeeId]) {
-//           acc[employee.EmployeeId] = employee;
-//         }
-//         return acc;
-//       }, {});
-  
-//       return Object.values(employees);
-
-//     // return result.recordset;
-
-//   } catch (error) {
-//     console.error("Error fetching all employees:", error);
-//     throw error;
-//   }
-// };
 
 // Retrieve new hire employees for the current month
 const getAllCountNewHireEmployees = async () => {
