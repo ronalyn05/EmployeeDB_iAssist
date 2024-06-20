@@ -515,6 +515,189 @@ const getAllNewHireEmployees = async () => {
     throw error;
   }
   };
+
+// Retrieve all employees from the database
+const getAllEmployees = async () => {
+  try {
+    let pool = await sql.connect(config);
+    let result = await pool.request().query(`
+    SELECT 
+    PD.EmployeeId,
+    PD.FirstName,
+    PD.LastName,
+    PD.Birthdate,
+    PD.MiddleName, 
+    PD.MaidenName,
+    PD.EmployeeName,
+    EI.*,
+    ADDRESS.CompleteAddress AS EmContactCompleteAddress,
+    ADDRESS.HouseNumber AS EmContactHouseNo,
+    ADDRESS.Barangay AS EmContactBarangay,
+    ADDRESS.CityMunicipality AS EmContactCityMunicipality,
+    ADDRESS.Province AS EmContactProvince,
+    ADDRESS.Region AS EmContactRegion,
+    ADDRESS.Country AS EmContactCountry,
+    ADDRESS.ZipCode AS EmContactZipcode,
+    ADDRESS.LandMark AS EmContactLandMark,
+    ADDRESS.IsPermanent AS Is_Permanent,
+    ADDRESS.IsEmergency AS Is_Emergency,
+    CONTACT.ContactNumber AS EmContactPhoneNumber,
+    EDUC.*,
+    EC.*,        
+    DU.DUCode,
+    DU.DUName AS DUName,
+    DEPT.DepartmentName,
+    PROD.ProdId
+FROM (
+    SELECT DISTINCT EmployeeId FROM EmpPersonalDetails
+) AS DistinctEmployeeIds
+INNER JOIN EmpPersonalDetails AS PD ON DistinctEmployeeIds.EmployeeId = PD.EmployeeId
+INNER JOIN EmployeeInfo AS EI ON PD.EmployeeId = EI.EmployeeId
+INNER JOIN Address AS ADDRESS ON PD.EmployeeId = ADDRESS.EmployeeId
+INNER JOIN Contact AS CONTACT ON PD.EmployeeId = CONTACT.EmployeeId
+INNER JOIN Education AS EDUC ON PD.EmployeeId = EDUC.EmployeeId
+LEFT JOIN EmergencyContactNumber AS EC ON PD.EmployeeId = EC.EmployeeId
+LEFT JOIN DeliveryUnit AS DU ON PD.EmployeeId = DU.EmployeeId
+LEFT JOIN Department AS DEPT ON PD.EmployeeId = DEPT.EmployeeId
+LEFT JOIN (
+    SELECT EmployeeId, STRING_AGG(ProdId, ',') AS ProdId
+    FROM Product
+    GROUP BY EmployeeId
+) AS PROD ON PD.EmployeeId = PROD.EmployeeId;
+    `);
+  //   SELECT 
+  //   PD.EmployeeId,
+  //   PD.FirstName,
+  //   PD.LastName,
+  //   PD.Birthdate,
+  //   PD.MiddleName, 
+  //   PD.MaidenName,
+  //   PD.EmployeeName,
+  //   EI.*,
+  //   ADDRESS.CompleteAddress AS EmContactCompleteAddress,
+  //   ADDRESS.HouseNumber AS EmContactHouseNo,
+  //   ADDRESS.Barangay AS EmContactBarangay,
+  //   ADDRESS.CityMunicipality AS EmContactCityMunicipality,
+  //   ADDRESS.Province AS EmContactProvince,
+  //   ADDRESS.Region AS EmContactRegion,
+  //   ADDRESS.Country AS EmContactCountry,
+  //   ADDRESS.ZipCode AS EmContactZipcode,
+  //   ADDRESS.LandMark AS EmContactLandMark,
+  //   ADDRESS.IsPermanent AS Is_Permanent,
+  //   ADDRESS.IsEmergency AS Is_Emergency,
+  //   CONTACT.ContactNumber AS EmContactPhoneNumber,
+  //   EDUC.*,
+  //   EC.*,        
+  //   DU.DUCode,
+  //   DU.DUName AS DUName,
+  //   DEPT.DepartmentName,
+  //   PROD.*,
+  //   SHFT.*,
+  //   COMPBEN.*,
+  //   DEPDNT.*
+
+  // FROM EmpPersonalDetails AS PD
+  // INNER JOIN EmployeeInfo AS EI ON PD.EmployeeId = EI.EmployeeId
+  // INNER JOIN Address AS ADDRESS ON PD.EmployeeId = ADDRESS.EmployeeId
+  // INNER JOIN Contact AS CONTACT ON PD.EmployeeId = CONTACT.EmployeeId
+  // INNER JOIN Education AS EDUC ON PD.EmployeeId = EDUC.EmployeeId
+  // LEFT JOIN EmergencyContactNumber AS EC ON PD.EmployeeId = EC.EmployeeId
+  // LEFT JOIN DeliveryUnit AS DU ON PD.EmployeeId = DU.EmployeeId
+  // LEFT JOIN Department AS DEPT ON PD.EmployeeId = DEPT.EmployeeId
+  // LEFT JOIN Product AS PROD ON PD.EmployeeId = PROD.EmployeeId
+  // LEFT JOIN Shift AS SHFT ON PD.EmployeeId = SHFT.EmployeeId
+  // LEFT JOIN CompensationBenefits AS COMPBEN ON PD.EmployeeId = COMPBEN.EmployeeId
+  // LEFT JOIN Dependent AS DEPDNT ON PD.EmployeeId = DEPDNT.EmployeeId
+    // // Filter out duplicate employees based on EmployeeId
+    // const employees = result.recordset.reduce((acc, employee) => {
+    //   if (!acc[employee.EmployeeId]) {
+    //     acc[employee.EmployeeId] = employee;
+    //   }
+    //   return acc;
+    // }, {});
+  //   const employees = Object.values(result.recordset.reduce((acc, employee) => {
+  //     if (employee.EmployeeId && !acc[employee.EmployeeId]) {
+  //         acc[employee.EmployeeId] = employee;
+  //     }
+  //     return acc;
+  // }, {}));
+  
+
+  //    return Object.values(employees);
+
+     const employees = result.recordset.reduce((acc, employee) => {
+      if (employee.EmployeeId && !acc[employee.EmployeeId]) {
+          acc[employee.EmployeeId] = employee;
+      }
+      return acc;
+  }, {});
+
+  return Object.values(employees);
+
+  } catch (error) {
+    console.error("Error fetching all employees:", error);
+    throw error;
+  }
+};
+
+// const getAllEmployees = async () => {
+//   try {
+//     let pool = await sql.connect(config);
+//     let result = await pool.request().query(`
+//       SELECT 
+//         PD.*, PD.EmployeeId, EI.*, ADDRESS.*, CONTACT.*, EDUC.*, EC.*,
+//         PROJ.ProjectId AS ProjectId, PROJ.DUID AS ProjectDUID, PROJ.ProjectCode, 
+//         PROJ.ProjectName, PROJ.is_Active,
+//         DU.DUID AS DUID, DU.DUCode, DU.DUName AS DUName, DU.Is_Active,
+//         DEPT.DepartmentId, DEPT.DepartmentName, DEPT.DUID AS DeptDUID,
+//         PROD.*, SHFT.*, COMPBEN.*, DEPDNT .*,
+//         C.ContactNumber AS EmContactPhoneNumber,
+//         A.CompleteAddress AS EmContactCompleteAddress,
+//         A.HouseNumber AS EmContactHouseNo,
+//         A.Barangay AS EmContactBarangay,
+//         A.CityMunicipality AS EmContactCityMunicipality,
+//         A.Province AS EmContactProvince,
+//         A.Region AS EmContactRegion,
+//         A.Country AS EmContactCountry,
+//         A.ZipCode AS EmContactZipcode,
+//         A.LandMark AS EmContactLandMark,
+//         A.IsPermanent AS Is_Permanent,
+//         A.IsEmergency AS Is_Emergency
+
+//       FROM EmpPersonalDetails AS PD
+//       INNER JOIN EmployeeInfo AS EI ON PD.EmployeeId = EI.EmployeeId
+//       INNER JOIN Address AS ADDRESS ON PD.EmployeeId = ADDRESS.EmployeeId
+//       INNER JOIN Contact AS CONTACT ON PD.EmployeeId = CONTACT.EmployeeId
+//       INNER JOIN Education AS EDUC ON PD.EmployeeId = EDUC.EmployeeId
+//       LEFT JOIN EmergencyContactNumber AS EC ON PD.EmployeeId = EC.EmployeeId
+//       INNER JOIN Contact AS C ON EC.ContactId = C.ContactId
+//       INNER JOIN Address AS A ON EC.AddressID = A.AddressID
+//       LEFT JOIN Project AS PROJ ON PD.EmployeeId = PROJ.EmployeeId
+//       LEFT JOIN Shift AS SHFT ON PD.EmployeeId = SHFT.EmployeeId
+//       LEFT JOIN DeliveryUnit AS DU ON PD.EmployeeId = DU.EmployeeId
+//       LEFT JOIN Department AS DEPT ON PD.EmployeeId = DEPT.EmployeeId
+//       LEFT JOIN Product AS PROD ON PD.EmployeeId = PROD.EmployeeId
+//       LEFT JOIN CompensationBenefits AS COMPBEN ON PD.EmployeeId = COMPBEN.EmployeeId
+//       LEFT JOIN Dependent AS DEPDNT ON PD.EmployeeId = DEPDNT.EmployeeId;
+//     `);
+//        // Filter out duplicate employees based on EmployeeId
+//        const employees = result.recordset.reduce((acc, employee) => {
+//         if (!acc[employee.EmployeeId]) {
+//           acc[employee.EmployeeId] = employee;
+//         }
+//         return acc;
+//       }, {});
+  
+//       return Object.values(employees);
+
+//     // return result.recordset;
+
+//   } catch (error) {
+//     console.error("Error fetching all employees:", error);
+//     throw error;
+//   }
+// };
+
 // Retrieve new hire employees for the current month
 const getAllCountNewHireEmployees = async () => {
   try {
@@ -594,7 +777,6 @@ const getYearlyNewHireCount = async () => {
     throw error;
   }
 };
-
 
 // Retrieve all users account from the database
 const getAllUserAccount = async () => {
@@ -1812,6 +1994,72 @@ const getHistoryByEmployeeId = async (employeeId) => {
     throw error;
   }
 };
+const getAllEmployeesToDownload = async () => {
+  try {
+      let pool = await sql.connect(config);
+
+      let result = await pool.request().query(`
+          SELECT 
+              e.EmployeeId,
+              e.FirstName,
+              e.MiddleName,
+              e.LastName,
+              e.EmailAddress,
+              e.Birthdate,
+              e.Gender,
+              e.MaritalStatus,
+              e.SSS,
+              e.PHIC,
+              e.HDMF,
+              e.TIN,
+              e.DateHired,
+              e.EmploymentStatus,
+              e.EmployeeStatus,
+              e.Rate,
+              e.ManagerID,
+              e.PMPICID,
+              e.DUHID,
+              e.IsManager,
+              e.IsPMPIC,
+              e.IsIndividualContributor,
+              e.IsActive,
+              e.Position,
+              e.IsDUHead,
+              e.Facility,
+              e.EmployeeRole,
+              e.EmployeeCategory,
+              C.ContactNumber AS EmContactPhoneNumber,
+        A.CompleteAddress AS EmContactCompleteAddress,
+        A.HouseNumber AS EmContactHouseNo,
+        A.Barangay AS EmContactBarangay,
+        A.CityMunicipality AS EmContactCityMunicipality,
+        A.Province AS EmContactProvince,
+        A.Region AS EmContactRegion,
+        A.Country AS EmContactCountry,
+        A.ZipCode AS EmContactZipcode,
+        A.LandMark AS EmContactLandMark,
+        A.IsPermanent AS Is_Permanent,
+        A.IsEmergency AS Is_Emergency
+          FROM EmpPersonalDetails e
+          LEFT JOIN EmployeeInfo ep ON e.EmployeeId = ep.EmployeeId
+          LEFT JOIN Contact c ON e.EmployeeId = c.EmployeeId
+          LEFT JOIN Address a ON e.EmployeeId = a.EmployeeId
+          LEFT JOIN Education edu ON e.EmployeeId = edu.EmployeeId
+          LEFT JOIN EmergencyContactNumber ec ON e.EmployeeId = ec.EmployeeId
+          LEFT JOIN DeliveryUnit du ON e.EmployeeId = du.EmployeeId
+          LEFT JOIN Project p ON e.EmployeeId = p.EmployeeId
+          LEFT JOIN Shift s ON e.EmployeeId = s.EmployeeId
+          LEFT JOIN Department d ON e.EmployeeId = d.EmployeeId
+          LEFT JOIN Product pr ON e.EmployeeId = pr.EmployeeId
+          LEFT JOIN Dependent dep ON e.EmployeeId = dep.EmployeeId
+      `);
+
+      return result.recordset;
+  } catch (error) {
+      console.error('Error fetching employees:', error);
+      throw new Error('Failed to fetch employees.');
+  }
+};
 
 module.exports = {
   updateUserPassword,
@@ -1859,6 +2107,8 @@ module.exports = {
   getHistoryByEmployeeId,
   getAllCountNewHireEmployees,
   getMonthlyNewHireCount,
-  getYearlyNewHireCount
+  getYearlyNewHireCount,
+  getAllEmployees,
+  getAllEmployeesToDownload
   // getExistingEmployeeIds
 };

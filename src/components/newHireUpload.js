@@ -287,7 +287,7 @@ const sendEmailNotification = async ( templateParams) => {
     });
 
         // Make a POST request to upload data
-        const response = await axios.post("/upload", dataWithPasswords, {
+        const response = await axios.post("/uploadNewHire", dataWithPasswords, {
           headers: {
             "Content-Type": "application/json",
           },

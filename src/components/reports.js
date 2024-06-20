@@ -4,45 +4,49 @@ import TopNavbar from "./topnavbar";
 import Footer from "./footer";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
-// import axios from "axios";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import ExcelJS from 'exceljs';
+import axios from "axios";
 
 const Reports = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [employees, setEmployees] = useState([]);
   const [filteredEmployees, setFilteredEmployees] = useState([]);
-  const [selectedFacility, setSelectedFacility] = useState("All"); // State for selected facility filter
- 
+  const [selectedFacility, setSelectedFacility] = useState("All");
+  const [selectedEmpStatus, setSelectedEmpStatus] = useState("All");
 
   const handleUpdate = (EmployeeId) => {
-    // Redirect to the update page with employee ID as a parameter
     navigate(`/update/${EmployeeId}`);
-    // navigate(`/update/${employee.EmpID}`, { state: { employee } });
   };
-    // Function to handle changes in the facility filter selection
-    const handleFacilityFilterChange = (event) => {
-      const { value } = event.target;
-      setSelectedFacility(value);
-      if (value === "All") {
-        setFilteredEmployees(employees);
-      } else {
-        const filtered = employees.filter((employee) => employee.Facility === value);
-        setFilteredEmployees(filtered);
-      }
-    };
-    
-  // //function to handle on deleting all data in different tables
-  // const handleDeleteAllData = async () => {
-  //   try {
-  //     const response = await axios.delete('/api/deleteAllEmployeeData');
-  //     alert(response.data.message);
-  //   } catch (error) {
-  //     console.error('Error deleting all employee data:', error);
-  //     alert('Failed to delete all employee data. Please try again.');
-  //   }
-  // };
 
-  // Effect to filter employee data based on search query
+  const handleFacilityFilterChange = (event) => {
+    const { value } = event.target;
+    setSelectedFacility(value);
+    if (value === "All") {
+      setFilteredEmployees(employees);
+    } else {
+      const filtered = employees.filter(
+        (employee) => employee.Facility === value
+      );
+      setFilteredEmployees(filtered);
+    }
+  };
+
+  const handleEmpStatusFilterChange = (event) => {
+    const { value } = event.target;
+    setSelectedEmpStatus(value);
+    if (value === "All") {
+      setFilteredEmployees(employees);
+    } else {
+      const filtered = employees.filter(
+        (employee) => employee.EmployeeStatus === value
+      );
+      setFilteredEmployees(filtered);
+    }
+  };
+
   const handleSearchChange = (event) => {
     const { value } = event.target;
     setSearchQuery(value);
@@ -52,86 +56,139 @@ const Reports = () => {
   const filterEmployees = (query) => {
     const filtered = employees.filter(
       (employee) =>
-        String(employee.EmployeeId)
-          .toLowerCase()
-          .includes(query.toLowerCase()) ||
+        String(employee.EmployeeId).toLowerCase().includes(query.toLowerCase()) ||
         employee.EmployeeName.toLowerCase().includes(query.toLowerCase())
     );
     setFilteredEmployees(filtered);
   };
-//handles in fetching the personal details
-useEffect(() => {
-  async function fetchData() {
-    try {
-      const response = await fetch("/retrieveReports");
-      if (!response.ok) {
-        throw new Error("Failed to fetch data");
-      }
 
-      const data = await response.json();
-
-      function convertToTitleCase(str) {
-        if (typeof str === "string" && str !== null && str.trim() !== "") {
-          return str.toLowerCase().replace(/\b\w/g, function (char) {
-            return char.toUpperCase();
-          });
-        } else {
-          return "";
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const response = await fetch("/retrieveReports");
+        if (!response.ok) {
+          throw new Error("Failed to fetch data");
         }
+
+        const data = await response.json();
+
+        function convertToTitleCase(str) {
+          if (typeof str === "string" && str !== null && str.trim() !== "") {
+            return str.toLowerCase().replace(/\b\w/g, function (char) {
+              return char.toUpperCase();
+            });
+          } else {
+            return "";
+          }
+        }
+
+        const formattedData = data.map((employee) => ({
+          ...employee,
+          EmployeeName: convertToTitleCase(employee.EmployeeName),
+          EmployeeStatus: convertToTitleCase(employee.EmployeeStatus),
+          EmploymentStatus: convertToTitleCase(employee.EmploymentStatus),
+        }));
+
+        setEmployees(formattedData);
+        setFilteredEmployees(formattedData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Active":
+        return "text-success";
+      case "Separated":
+        return "text-danger";
+      case "Inactive - Maternity":
+      case "Inactive - Sickness":
+        return "text-primary";
+      case "Inactive - Absent Without Leave":
+        return "text-danger";
+      case "Inactive - Absent With Leave":
+        return "text-info";
+      case "Inactive - Suspension":
+        return "text-warning";
+      default:
+        return "";
+    }
+  };
+//this only download data that are visible in the user interface table
+  // const handleDownloadExcel = () => {
+  //   const ws = XLSX.utils.json_to_sheet(filteredEmployees);
+  //   const wb = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(wb, ws, "Employees Data Report");
+
+  //   XLSX.writeFile(wb, "Employees_Report.xlsx");
+  // };
+
+// Helper function to convert text to title case
+const toTitleCase = (text) => {
+  return text.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+};
+//this downloads all the employee data in multiple tables 
+// Function to handle Excel download
+const handleDownloadExcel = async () => {
+  try {
+      // Fetch data from the backend
+      const response = await axios.get('/api/getAllEmployees');
+
+      if (response.status !== 200) {
+          throw new Error("Failed to fetch data");
       }
 
-      const formattedData = data.map((employee) => ({
-        ...employee,
-        EmployeeName: convertToTitleCase(employee.EmployeeName),
-        EmployeeStatus: convertToTitleCase(employee.EmployeeStatus),
-        EmploymentStatus: convertToTitleCase(employee.EmploymentStatus),
-      }));
+      const data = response.data;
 
-      setEmployees(formattedData);
-      setFilteredEmployees(formattedData);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  }
+      // Log the response data to inspect
+      console.log("Data from backend:", data);
 
-  fetchData();
-}, []);
+      // Extract headers (field names) dynamically from the first row of data
+      const headers = Object.keys(data[0]);
 
-const getStatusColor = (status) => {
-  switch (status) {
-    case "Active":
-      return "text-success"; // Green color for Active status
-    case "Separated":
-      return "text-danger"; // Red color for Separated status
-    case "Inactive - Maternity":
-      return "text-primary";
-    case "Inactive - Sickness":
-      return "text-primary";
-    case "Inactive - Absent Without Leave":
-      return "text-danger";
-    case "Inactive - Absent With Leave":
-      return "text-info";
-    case "Inactive - Suspension":
-      return "text-warning"; // Gray color for other inactive statuses
-    default:
-      return ""; // Default color if status doesn't match
+      // Format date fields (assuming they are ISO strings)
+      const formattedData = data.map((row) => {
+          const formattedRow = {};
+          headers.forEach((field) => {
+              if (['FirstName', 'LastName', 'MiddleName', 'MaidenName', 'EmployeeName', 'DUName', 'DepartmentName', 'ManagerName', 'PMPICIDName', 'EmploymentStatus'].includes(field)) {
+                  formattedRow[field] = row[field] ? toTitleCase(row[field]) : '';
+              } else if (field === 'Birthdate') {
+                  formattedRow[field] = row[field] ? new Date(row[field]).toLocaleDateString() : '';
+              } else if (field === 'EmployeeId' || field === 'ProdId') {
+                  // Ensure array fields are joined properly
+                  formattedRow[field] = Array.isArray(row[field]) ? row[field][0] : row[field];
+              } else {
+                  formattedRow[field] = row[field];
+              }
+          });
+          return formattedRow;
+      });
+
+      // Create a worksheet from the formatted data
+      const ws = XLSX.utils.json_to_sheet(formattedData, { header: headers });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Employees Data Report");
+
+      // Write the workbook to a file
+      XLSX.writeFile(wb, "Employees_Report.xlsx");
+      alert("File has been successfully downloaded!");
+  } catch (error) {
+      console.error("Error occurred while downloading data:", error);
+      alert("Failed to download data. Please try again.");
   }
 };
-
-
+  
   return (
     <div>
       <div id="wrapper">
-        {/* Sidebar */}
         <Navbar />
-        {/* Content Wrapper */}
         <div id="content-wrapper" className="d-flex flex-column">
-          {/* Main Content */}
           <div id="content">
-            {/* Topbar */}
             <TopNavbar />
-            {/* Start of Page Content */}
-
             <div className="container-fluid">
               <div className="row justify-content-center">
                 <div className="col-xl-12 col-lg-12">
@@ -140,21 +197,6 @@ const getStatusColor = (status) => {
                       <h5 className="m-0 font-weight-bold text-primary">
                         Reports
                       </h5>
-                        {/* Facility filter dropdown */}
-                        {/* <select
-                        className="form-select"
-                        value={selectedFacility}
-                        onChange={handleFacilityFilterChange}
-                      >
-                        <option value="All">All</option>
-                        {employees.length > 0 &&
-                          [...new Set(employees.map((employee) => employee.Facility))].map((facility, index) => (
-                            <option key={index} value={facility}>
-                              {facility}
-                            </option>
-                          ))}
-                      </select> */}
-                      {/* Topbar Search */}
                       <form className="form-inline ml-auto">
                         <div className="input-group">
                           <div className="input-group-prepend">
@@ -171,35 +213,51 @@ const getStatusColor = (status) => {
                           />
                         </div>
                       </form>
-                      {/* <button
-                                      className="update-button btn btn-xs"
-                                      onClick={handleDeleteAllData} // handle to delete all data in different table
-                                    >
-                                      <i className="fas fa-trash-alt"></i>
-                                    </button>
-                                    <span>Delete all data</span> */}
+                      <button
+                        className="btn btn-primary ml-2"
+                        onClick={handleDownloadExcel}
+                      >
+                       <i className="fas fa-arrow-down"></i>  Employee Reports
+                      </button>
                     </div>
                     <div className="card-body">
-                       {/* Facility filter dropdown */}
-                       <div className="col-md-2">
-                        <div className="form-group d-flex align-items-center">
-                        {/* <label className="form-label me-2" style={{ fontSize: '1rem' }}>Facility by:</label> */}
+                      <div className="d-flex">
+                      <label className="mr-2" style={{ alignSelf: 'center' }}>Filter by:</label>
+                        <div className="form-group mr-2">
                           <select
                             className="form-control"
                             value={selectedFacility}
                             onChange={handleFacilityFilterChange}
                           >
-                             <option value="All">All Facility</option>
-                              {employees.length > 0 &&
-                                [...new Set(employees.map((employee) => employee.Facility))].map((facility, index) => (
-                                  <option key={index} value={facility}>
-                                     {facility} Facility
-                             </option>
+                            <option value="All">All Facility</option>
+                            {employees.length > 0 &&
+                              [...new Set(
+                                employees.map((employee) => employee.Facility)
+                              )].map((facility, index) => (
+                                <option key={index} value={facility}>
+                                  {facility} Facility
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        <div className="form-group">
+                          <select
+                            className="form-control"
+                            value={selectedEmpStatus}
+                            onChange={handleEmpStatusFilterChange}
+                          >
+                            <option value="All">All Statuses</option>
+                            {employees.length > 0 &&
+                              [...new Set(
+                                employees.map((employee) => employee.EmployeeStatus)
+                              )].map((empstatus, index) => (
+                                <option key={index} value={empstatus}>
+                                  {empstatus}
+                                </option>
                               ))}
                           </select>
                         </div>
                       </div>
-
                       <div className="table-responsive">
                         <table className="table">
                           <thead>
@@ -232,28 +290,21 @@ const getStatusColor = (status) => {
                                       className="update-button btn btn-xs mr-2"
                                       onClick={() =>
                                         handleUpdate(employee.EmployeeId)
-                                      } // Call handleUpdate with employee ID
+                                      }
                                     >
                                       <i className="fas fa-pencil-alt"></i>
                                     </button>
-                                    {/* <button
-                                      className="btn btn-xs btn-success "
-                                      onClick={() =>
-                                        handleDownload(employee)
-                                      }
-                                    >
-                                      <i className="far fa-eye"></i>
-                                    </button> */}
                                   </td>
                                   <td>{employee.EmployeeId}</td>
                                   <td>{employee.EmployeeName}</td>
                                   <td>{employee.Facility}</td>
-                                  {/* <td>{employee.EmployeeStatus}</td> */}
                                   <td>
-                                      <span className={getStatusColor(employee.EmployeeStatus)}>
-                                        {employee.EmployeeStatus}
-                                      </span>
-                                    </td>
+                                    <span
+                                      className={getStatusColor(employee.EmployeeStatus)}
+                                    >
+                                      {employee.EmployeeStatus}
+                                    </span>
+                                  </td>
                                   <td>{employee.EmploymentStatus}</td>
                                   <td>{employee.DateHired}</td>
                                   <td>{employee.EmployeeRole}</td>
@@ -264,8 +315,7 @@ const getStatusColor = (status) => {
                                   <td>{employee.DUName}</td>
                                   <td>{employee.WorkWeekType}</td>
                                   <td>{employee.WorkArrangement}</td>
-                                  {/* <td>{employee.ShiftName}</td> */}
-                                  <td>{employee.ShiftCode + ' ' + employee.ShiftName}</td>
+                                  <td>{employee.ShiftCode + " " + employee.ShiftName}</td>
                                   <td>{employee.ShiftType}</td>
                                 </tr>
                               ))
@@ -282,16 +332,10 @@ const getStatusColor = (status) => {
                 </div>
               </div>
             </div>
-            {/* /.container-fluid */}
           </div>
-          {/* Footer */}
           <Footer />
-          {/* End of Page Content */}
         </div>
-        {/* End of Content Wrapper */}
       </div>
-      {/* End of Page Wrapper */}
-      {/* Add Dependent Modal */}
     </div>
   );
 };
