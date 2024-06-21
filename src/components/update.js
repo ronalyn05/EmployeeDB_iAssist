@@ -5,7 +5,6 @@ import TopNavbar from './topnavbar';
 import Footer from './footer';
 import '../App.css';
 import { Modal, Button } from 'react-bootstrap';
-import jsPDF from "jspdf";
 import 'jspdf-autotable';
 
  function UpdateEmployeeInfo() {
@@ -116,8 +115,54 @@ import 'jspdf-autotable';
   const [provinces, setProvinces] = useState([]);
   const [cities, setCities] = useState([]);
   const [barangay, setBarangay] = useState([]);
+  const [addressErrors, setAddressErrors] = useState({});
+  const [ECaddressErrors, setECAddressErrors] = useState({});
+  const [ECcountries, setECCountries] = useState([]);
+  const [ECregions, setECRegions] = useState([]);
+  const [ECprovinces, setECProvinces] = useState([]);
+  const [ECcities, setECCities] = useState([]);
+  const [ECbarangay, setECBarangay] = useState([]);
+    // Initialize state for phone number and validation error
+  const [EMphoneError, setEmPhoneError] = useState('');
+  const [contactError, setcontactError] = useState('');
+  const [secondarycontactError, setsecondarycontactError] = useState('');
+  const [newcontactError, setnewcontactError] = useState('');
   
+  //handles to validate address
+  const validateAddressForm = () => {
+    const errors = {};
+    if (employeeData.Country) {
+      if (!employeeData.Province) errors.Province = 'Region is required';
+      if (!employeeData.Region) errors.Region = 'Province is required';
+      if (!employeeData.CityMunicipality) errors.CityMunicipality = 'City / Municipality is required';
+      if (!employeeData.Barangay) errors.Barangay = 'Barangay is required';
+      if (!employeeData.ZipCode) errors.ZipCode = 'ZipCode is required';
+    }
+    setAddressErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  useEffect(() => {
+    updateCompleteAddress();
+  }, [employeeData.Barangay, employeeData.CityMunicipality, employeeData.Province, employeeData.Country, employeeData.ZipCode]);
 
+//handles to validate Emergency contact address
+  const validateECAddressForm = () => {
+    const errors = {};
+    if (employeeData.EmContactCountry) {
+      if (!employeeData.EmContactRegion) errors.EmContactRegion = 'Region is required';
+      if (!employeeData.EmContactProvince) errors.EmContactProvince = 'Province is required';
+      if (!employeeData.EmContactCityMunicipality) errors.EmContactCityMunicipality = 'City / Municipality is required';
+      if (!employeeData.EmContactBarangay) errors.EmContactBarangay = 'Barangay is required';
+      if (!employeeData.EmContactZipcode) errors.EmContactZipcode = 'ZipCode is required';
+    }
+    setECAddressErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  useEffect(() => {
+    updateECcompleteAddress();
+  }, [employeeData.EmContactBarangay, employeeData.EmContactCityMunicipality, employeeData.EmContactProvince, employeeData.EmContactRegion, employeeData.EmContactCountry, employeeData.EmContactZipcode]);
 
     // Function to handle input change in the search field
   const handleSearchChange = (e) => {
@@ -345,10 +390,24 @@ const handleCloseAddModal = () => {
       setErrorMessage('Error fetching employee data');
     }
   };
+  //validate phone number
+  const validatePhoneNumber = (value) => {
+    const numberRegex = /^[0-9]*$/;
+  
+    if (!numberRegex.test(value)) {
+      return 'Phone number must only contain numbers';
+    } else if (value.length > 11) {
+      return 'Phone number cannot exceed 11 digits';
+    }
+  
+    return '';
+  };
+  
 //HANDLES INPUT TO UPDATE DATA
 const handleInputChange = (e) => {
     const { name, value } = e.target;
     let newValue = value;
+    let error = '';
     
     // Convert specific fields to booleans if necessary
     switch (name) {
@@ -368,35 +427,49 @@ const handleInputChange = (e) => {
       default:
         break;
     }
-  
+  //   // Phone number validation
+  //   if (name === 'EmContactPhoneNumber' || name === 'ContactNumber' || name === 'SecondaryContactNum') {
+  //     // Regex to allow only numbers 
+  //     const numberRegex = /^[0-9]*$/;
+
+  //     if (!numberRegex.test(value)) {
+  //         setphoneError('Phone number must only contain numbers');
+  //     } else if (value.length > 11) {
+  //         setphoneError('Phone number cannot exceed 11 digits');
+  //     } else {
+  //         setphoneError('');
+  //     }
+  // }
+
+    // Phone number validation
+    if (name === 'EmContactPhoneNumber' || name === 'ContactNumber' || name === 'SecondaryContactNum' || name === 'newContactNumber') {
+      error = validatePhoneNumber(value);
+    }
+
     setEmployeeData({
       ...employeeData,
       [name]: newValue
     });
-    // setEmployeeData(prevData => ({
-    //   ...prevData,
-    //   [name]: value
-    // }));
 
       // Reset otherHRANType if it's not the "Others" option
       if (name === 'HRANType' && value !== 'Others') {
         setOtherHRANType('');
     }
+     // Set the error state based on validation
+    if (name === 'EmContactPhoneNumber' || name === 'ContactNumber' || name === 'SecondaryContactNum' || name === 'newContactNumber') {
+      setEmPhoneError(error);
+      setcontactError(error);
+      setsecondarycontactError(error);
+      setnewcontactError(error);
+
+    }
   };
-  // const handleInputChange = (e) => {
-  //   const { name, value } = e.target;
-  //   setEmployeeData(prevData => ({
-  //     ...prevData,
-  //     [name]: value
-  //   }));
-  // };
-  
 
   //function to handle the additional input for hran type
   const handleOtherInputChange = (event) => {
     setOtherHRANType(event.target.value);
 };
-
+//function that handles in adding other hran type details
 const addOtherHRANType = () => {
     if (otherHRANType && !options.includes(otherHRANType)) {
         setOptions([...options, otherHRANType]);
@@ -410,7 +483,6 @@ const handleAddContactForm = async (e) => {
   e.preventDefault();
   console.log(employeeData.newContactNumber);
   try {
-    //  const employeeId = employeeData.EmployeeId;;
     const contactResponse = await fetch(`http://localhost:5000/addContactNumber/${employeeId}`, {
       method: 'POST',
       headers: {
@@ -488,113 +560,8 @@ const handleAddContactForm = async (e) => {
         alert('Failed to update employee personal details. Please try again later.');
       }
   };
-   //UPDATE EMPLOYEE INFORMATION
-// Function to handle form submission
-// const handleFormEmpInfoSubmit = async (e) => {
-//   e.preventDefault(); // Prevent the default form submission
 
-//   // Validate HRANType is chosen
-//   if (!employeeData.HRANType) {
-//     alert('Please choose an HRANType before updating the employee information.');
-//     return;
-//   }
-
-//   try {
-//     // Fetch the current employee data
-//     const currentDataResponse = await fetch(`http://localhost:5000/getEmployeeInfo/${employeeId}`);
-//     if (!currentDataResponse.ok) {
-//       throw new Error('Failed to fetch current employee data');
-//     }
-//     const currentData = await currentDataResponse.json();
-
-//     // Store previous values for the fields being updated
-//     const previousValues = {
-//       Position: currentData.Position,
-//       // Add other fields as needed
-//     };
-
-//     // Fetch call to update employee information
-//     const response = await fetch(`http://localhost:5000/updateEmployeeInfo/${employeeId}`, {
-//       method: 'PUT',
-//       headers: {
-//         'Content-Type': 'application/json',
-//       },
-//       body: JSON.stringify(employeeData),
-//     });
-
-//     if (!response.ok) {
-//       throw new Error('Failed to update employee');
-//     }
-
-//     // Retrieve the name of the employee from employeeData
-//     const { FirstName, LastName } = employeeData;
-//     const employeeName = `${FirstName} ${LastName}`;
-
-//     // Compare initial employeeData with updated employeeData
-//     const updatedFields = [];
-//     Object.entries(employeeData).forEach(([key, value]) => {
-//       if (value !== initialEmployeeData[key]) {
-//         updatedFields.push(key);
-//       }
-//     });
-
-//     // Filter out fields that contain EmployeeName, FirstName, MiddleName, LastName
-//     const filteredFields = updatedFields.filter(
-//       (field) => !['EmployeeName', 'FirstName', 'MiddleName', 'LastName'].includes(field)
-//     );
-
-//     // Generate success message based on updated fields
-//     let successMessage;
-//     if (filteredFields.length === 0) {
-//       successMessage = `No employee information has been updated for ${employeeName}.`;
-//     } else {
-//       successMessage = `Employee ${employeeName} has successfully updated ${filteredFields.join(', ')}!`;
-//     }
-
-//     // Retrieve user's first name from session storage
-//     const updatedByFirstName = sessionStorage.getItem('firstName');
-//     const updatedByLastName = sessionStorage.getItem('lastName');
-//     const updatedByRole = sessionStorage.getItem('role');
-//     const updatedBy = `${updatedByRole} ${updatedByFirstName} ${updatedByLastName}`;
-
-//     // Get the chosen HRANType from the employeeData
-//     const chosenHRANType = employeeData.HRANType;
-
-//     // Insert into History table
-//     const historyData = {
-//       EmployeeName: employeeName,
-//       Action: 'Update',
-//       FieldName: chosenHRANType,
-//       OldValue: previousValues.Position, // Use the previous position value
-//       NewValue: employeeData.Position,
-//       DateCreated: new Date().toISOString(),
-//       UpdatedBy: updatedBy,
-//       EmployeeId: employeeId,
-//     };
-
-//     const historyResponse = await fetch('http://localhost:5000/addToHistory', {
-//       method: 'POST',
-//       headers: {
-//         'Content-Type': 'application/json',
-//       },
-//       body: JSON.stringify(historyData),
-//     });
-
-//     if (!historyResponse.ok) {
-//       throw new Error('Failed to add record to History');
-//     }
-
-//     // Display the success message
-//     alert(successMessage);
-
-//     // Reload the page after showing the alert
-//     window.location.reload();
-//   } catch (error) {
-//     console.error('Error updating employee information:', error);
-//     // Send alert message for failure
-//     alert('Failed to update employee information. Please try again later.');
-//   }
-// };
+// Function to handle in updating the employee information
 const handleFormEmpInfoSubmit = async (e) => {
   e.preventDefault(); // Prevent the default form submission
 
@@ -614,12 +581,7 @@ const handleFormEmpInfoSubmit = async (e) => {
 
     // Store previous values for all the fields being updated
     const previousValues = { ...currentData };
-    
-    // // Store previous values for the fields being updated
-    // const previousValues = {
-    //   Position: currentData.Position,
-    //   // Add other fields as needed
-    // };
+
 
     // Fetch call to update employee information
     const response = await fetch(`http://localhost:5000/updateEmployeeInfo/${employeeId}`, {
@@ -665,27 +627,8 @@ const handleFormEmpInfoSubmit = async (e) => {
     const updatedByRole = sessionStorage.getItem('role');
     const updatedBy = `${updatedByRole} ${updatedByFirstName} ${updatedByLastName}`;
 
-    // Get the chosen HRANType from the employeeData
-    // const chosenHRANType = employeeData.HRANType;
-
     // Insert into History table for each updated field
     for (const field of filteredFields) {
-      // const getPhilippineDateTime = () => {
-      //   return new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila', hour12: false });
-      // };
-      
-      // const historyData = {
-      //   EmployeeName: employeeName,
-      //   Action: 'Update',
-      //   FieldName: field,
-      //   // FieldName: field === 'HRANType' ? chosenHRANType : field,
-      //   OldValue: previousValues[field] || 'N/A', // Use the previous value or 'N/A' if not available
-      //   NewValue: employeeData[field],
-      //   DateCreated: getPhilippineDateTime(),
-      //   UpdatedBy: updatedBy,
-      //   EmployeeId: employeeId,
-      // };
-      
       const historyData = {
         EmployeeName: employeeName,
         Action: 'Update',
@@ -722,214 +665,63 @@ const handleFormEmpInfoSubmit = async (e) => {
   }
 };
 
-  // const handleFormEmpInfoSubmit = async (e) => {
-  //   e.preventDefault(); // Prevent the default form submission
-
-  //   // Validate HRANType is chosen
-  //   if (!employeeData.HRANType) {
-  //       alert('Please choose an HRANType before updating the employee information.');
-  //       return;
-  //   }
-
-  //   try {
-  //       // Fetch call to update employee information
-  //       const response = await fetch(`http://localhost:5000/updateEmployeeInfo/${employeeId}`, {
-  //           method: 'PUT',
-  //           headers: {
-  //               'Content-Type': 'application/json'
-  //           },
-  //           body: JSON.stringify(employeeData)
-  //       });
-
-  //       if (!response.ok) {
-  //           throw new Error('Failed to update employee');
-  //       }
-
-  //       // Retrieve the name of the employee from employeeData
-  //       const { FirstName, LastName } = employeeData;
-  //       const employeeName = `${FirstName} ${LastName}`;
-
-  //       // Compare initial employeeData with updated employeeData
-  //       const updatedFields = [];
-  //       Object.entries(employeeData).forEach(([key, value]) => {
-  //           if (value !== initialEmployeeData[key]) {
-  //               updatedFields.push(key);
-  //           }
-  //       });
-
-  //       // Filter out fields that contain EmployeeName, FirstName, MiddleName, LastName
-  //       const filteredFields = updatedFields.filter(field => !['EmployeeName', 'FirstName', 'MiddleName', 'LastName'].includes(field));
-
-  //       // Generate success message based on updated fields
-  //       let successMessage;
-  //       if (filteredFields.length === 0) {
-  //           successMessage = `No employee information has been updated for ${employeeName}.`;
-  //       } else {
-  //           successMessage = `Employee ${employeeName} has successfully updated ${filteredFields.join(', ')}!`;
-  //       }
-
-  //       // Retrieve user's role and first name from session storage
-  //       // const updatedBy = {
-  //       //     Role: sessionStorage.getItem('role'),
-  //       //     FirstName: sessionStorage.getItem('firstName')
-  //       // };
-
-  //       // Get the chosen HRANType from the employeeData
-  //       const chosenHRANType = employeeData.HRANType;
-
-  //       // Insert into History table
-  //       const historyData = {
-  //           EmployeeName: employeeName,
-  //           Action: 'Update', 
-  //           FieldName: chosenHRANType,
-  //           OldValue: previousPosition, 
-  //           NewValue: employeeData.Position,
-  //           DateCreated: new Date().toISOString(),
-  //           UpdatedBy: 'Hr Admin' + '' + sessionStorage.getItem('firstName'), 
-  //           EmployeeId: employeeId
-  //       };
-
-  //       const historyResponse = await fetch('http://localhost:5000/addToHistory', {
-  //           method: 'POST',
-  //           headers: {
-  //               'Content-Type': 'application/json'
-  //           },
-  //           body: JSON.stringify(historyData)
-  //       });
-
-  //       if (!historyResponse.ok) {
-  //           throw new Error('Failed to add record to History');
-  //       }
-
-  //       // Display the success message
-  //       alert(successMessage);
-
-  //       // Reload the page after showing the alert
-  //       window.location.reload();
-
-  //   } catch (error) {
-  //       console.error('Error updating employee information:', error);
-  //       // Send alert message for failure
-  //       alert('Failed to update employee information. Please try again later.');
-  //   }
-  // };
-
-
-
-// Function to handle input change for Position
-// const handlePositionChange = (e) => {
-//     // Update previousPosition when the position changes
-//     previousPosition = employeeData.Position;
-//     // Call the generic handleInputChange function
-//     handleInputChange(e);
-// };
-
-
-    //   const handleFormEmpInfoSubmit = async (e) => {
-    //       e.preventDefault(); // Prevent the default form submission
-          
-    //       try {
-    //       const response = await fetch(`http://localhost:5000/updateEmployeeInfo/${employeeId}`, {
-    //           method: 'PUT',
-    //           headers: {
-    //           'Content-Type': 'application/json'
-    //           },
-    //           body: JSON.stringify(employeeData)
-    //       });
-      
-    //       if (!response.ok) {
-    //           throw new Error('Failed to update employee');
-    //       }
-      
-    //   // Retrieve the name of the employee from employeeData
-    //   const { FirstName, LastName } = employeeData;
-    //   const employeeName = `${FirstName} ${LastName}`;
-
-    //   // Compare initial employeeData with updated employeeData
-    //   const updatedFields = [];
-    //   Object.entries(employeeData).forEach(([key, value]) => {
-    //     if (value !== initialEmployeeData[key]) {
-    //       updatedFields.push(key);
-    //     }
-    //   });
-
-    //   // Filter out fields that contain EmployeeName, FirstName, MiddleName, LastName
-    //   const filteredFields = updatedFields.filter(field => !['EmployeeName', 'FirstName', 'MiddleName', 'LastName'].includes(field));
-
-    //   // Generate success message based on updated fields
-    //   let successMessage;
-    //   if (filteredFields.length === 0) {
-    //     successMessage = `No employee information has been updated for ${employeeName}.`;
-    //   } else {
-    //     successMessage = `Employee ${employeeName} has successfully updated ${filteredFields.join(', ')}!`;
-    //   }
-    
-    //     // Display the success message
-    //     alert(successMessage);
-
-    //     // Reload the page after showing the alert
-    //     window.location.reload();
-
-    //     } catch (error) {
-    //       console.error('Error updating employee information:', error);
-    //       // Send alert message for failure
-    //       alert('Failed to update employee information. Please try again later.');
-    //     }
-    //   };
       //UPDATE ADDRESS DETAILS
-   
       const handleAddressFormSubmit = async (e) => {
         e.preventDefault(); // Prevent the default form submission
-        
+    
+        if (!validateAddressForm()) {
+          return; // If validation fails, do not proceed with the API call
+        }
+    
         try {
-        const response = await fetch(`http://localhost:5000/updateEmployeeAddress/${employeeId}`, {
+          const response = await fetch(`http://localhost:5000/updateEmployeeAddress/${employeeId}`, {
             method: 'PUT',
             headers: {
-            'Content-Type': 'application/json'
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify(employeeData)
-        });
+          });
     
-        if (!response.ok) {
+          if (!response.ok) {
             throw new Error('Failed to update employee address');
-        }
+          }
     
-     // Retrieve the name of the employee from employeeData
-     const { FirstName, LastName } = employeeData;
-     const employeeName = `${FirstName} ${LastName}`;
- 
-     // Compare initial employeeData with updated employeeData
-     const updatedFields = [];
-     Object.entries(employeeData).forEach(([key, value]) => {
-       if (value !== initialEmployeeData[key]) {
-         updatedFields.push(key);
-       }
-     });
- 
-     // Filter out fields that contain EmployeeName, FirstName, MiddleName, LastName
-     const filteredFields = updatedFields.filter(field => !['EmployeeName', 'FirstName', 'MiddleName', 'LastName'].includes(field));
- 
-     // Generate success message based on updated fields
-     let successMessage;
-     if (filteredFields.length === 0) {
-       successMessage = `No address details has been updated for ${employeeName}.`;
-     } else {
-       successMessage = `Employee ${employeeName} has successfully updated ${filteredFields.join(', ')}!`;
-     }
- 
-  
-      // Display the success message
-      alert(successMessage);
-
-       // Reload the page after showing the alert
-       window.location.reload();
-       // Navigate to report.js
-      // navigate("/reports");
-  
+          // Retrieve the name of the employee from employeeData
+          const { FirstName, LastName } = employeeData;
+          const employeeName = `${FirstName} ${LastName}`;
+    
+          // Compare initial employeeData with updated employeeData
+          const updatedFields = [];
+          Object.entries(employeeData).forEach(([key, value]) => {
+            if (value !== initialEmployeeData[key]) {
+              updatedFields.push(key);
+            }
+          });
+    
+          // Filter out fields that contain EmployeeName, FirstName, MiddleName, LastName
+          const filteredFields = updatedFields.filter(field => !['EmployeeName', 'FirstName', 'MiddleName', 'LastName'].includes(field));
+    
+          // Generate success message based on updated fields
+          let successMessage;
+          if (filteredFields.length === 0) {
+            successMessage = `No address details have been updated for ${employeeName}.`;
+          } else {
+            successMessage = `Employee ${employeeName} has successfully updated ${filteredFields.join(', ')}!`;
+          }
+    
+          // Display the success message
+          alert(successMessage);
+    
+          // Reload the page after showing the alert
+          window.location.reload();
+          // Navigate to report.js
+          // navigate("/reports");
+    
         } catch (error) {
-        console.error('Error updating employee address:', error);
-        }
-    };
+          console.error('Error updating employee address:', error);
+        } 
+      };
+
     //UPDATE PROJECT DETAILS
   const handleProjectFormSubmit = async (e) => {
     e.preventDefault();
@@ -1210,7 +1002,7 @@ const handleFormEmpInfoSubmit = async (e) => {
       alert('Failed to update dependent details. Please try again later.');
     }
   };
-              //ADD DEPENDENT DETAILS       
+  //ADD DEPENDENT DETAILS       
   const handleAddDependent = async (e) => {
     e.preventDefault();
 
@@ -1248,7 +1040,7 @@ const handleFormEmpInfoSubmit = async (e) => {
       alert('Failed to add dependent. Please try again.');
     }
   };
-           //UPDATE PRODUCT DETAILS
+        //UPDATE PRODUCT DETAILS
         const handleProductFormSubmit = async (e) => {
             e.preventDefault();
             console.log(employeeData);
@@ -1301,6 +1093,10 @@ const handleFormEmpInfoSubmit = async (e) => {
   //UPDATE EMERGENCY CONTACT DETAILS
   const handleECFormSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validateECAddressForm()) {
+      return; // If validation fails, do not proceed with the API call
+    }
     try {
       const response = await fetch(`http://localhost:5000/updateEmerContact/${employeeId}`, {
         method: 'PUT',
@@ -1371,11 +1167,11 @@ const handleFormEmpInfoSubmit = async (e) => {
     };
   
     const statusColor = getStatusColor(employeeData.EmployeeStatus);
-
+//Address filtering starts here
     useEffect(() => {
       fetchCountries();
     }, []);
-  
+  //function to fecth the country in geoname api
     const fetchCountries = async () => {
       const username = 'innodata_test'; // GeoNames username
       try {
@@ -1390,132 +1186,135 @@ const handleFormEmpInfoSubmit = async (e) => {
         console.error('Error fetching countries:', error);
       }
     };
-  
-    const handleCountryChange = async (e) => {
-      const selectedCountry = e.target.value;
-      handleInputChange(e); // To update the country in employeeData
-      setRegions([]); // Clear regions when country changes
-      setProvinces([]);
-      setCities([]);
-      setBarangay([]);
-      try {
-        const username = 'innodata_test';
-        const response = await fetch(`http://api.geonames.org/searchJSON?q=${selectedCountry}&featureCode=ADM1&username=${username}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch regions data');
-        }
-        const data = await response.json();
-        const regions = data.geonames.map(region => region.name);
-        setRegions(regions);
-      } catch (error) {
-        console.error('Error fetching regions data:', error);
+   //function to handle in filtering annd mapping the country
+   const handleCountryChange = async (e) => {
+    const selectedCountry = e.target.value;
+    setEmployeeData({ ...employeeData, Country: selectedCountry });
+    setRegions([]);
+    setProvinces([]);
+    setCities([]);
+    setBarangay([]);
+    try {
+      const username = 'innodata_test';
+      const response = await fetch(`http://api.geonames.org/searchJSON?q=${selectedCountry}&featureCode=ADM1&username=${username}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch regions data');
       }
-    };
-  
-    const handleRegionChange = async (e) => {
-      const selectedRegion = e.target.value;
-      handleInputChange(e); // To update the region in employeeData
-      setProvinces([]); // Clear provinces when region changes
-      setCities([]);
-      setBarangay([]);
-      try {
-        const username = 'innodata_test';
-        const response = await fetch(`http://api.geonames.org/searchJSON?q=${selectedRegion}&featureCode=ADM2&username=${username}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch provinces data');
-        }
-        const data = await response.json();
-        const provinces = data.geonames.map(item => item.name);
-        setProvinces(provinces);
-      } catch (error) {
-        console.error('Error fetching provinces data:', error);
-      }
-    };
+      const data = await response.json();
+      const regions = data.geonames.map(region => region.name);
+      setRegions(regions);
+    } catch (error) {
+      console.error('Error fetching regions data:', error);
+    }
+  };
 
-    const handleProvinceChange = async (e) => {
-      const selectedProvince = e.target.value;
-      handleInputChange(e); // To update the province in employeeData
-      setCities([]);
-      try {
-        const username = 'innodata_test';
-        const provinceResponse = await fetch(`http://api.geonames.org/searchJSON?q=${selectedProvince}&featureCode=PPLA&featureCode=PPLA3&username=${username}`);
-        if (!provinceResponse.ok) {
-          throw new Error('Failed to fetch cities data');
-        }
-        const provinceData = await provinceResponse.json();
-        const provinceCities = provinceData.geonames.map(item => item.name);
-  
-        // Fetching highly urbanized cities separately
-        const hucResponse = await fetch(`http://api.geonames.org/searchJSON?country=PH&featureCode=PPL&featureCode=PPLA2&featureCode=PPLA3&featureCode=PPLA4&username=${username}`);
-        if (!hucResponse.ok) {
-          throw new Error('Failed to fetch highly urbanized cities');
-        }
-        const hucData = await hucResponse.json();
-        const hucCities = hucData.geonames
-          .filter(item => item.adminName1 === selectedProvince)
-          .map(item => item.name);
-  
-        const allCities = [...new Set([...provinceCities, ...hucCities])];
-        setCities(allCities);
-      } catch (error) {
-        console.error('Error fetching cities data:', error);
+  const handleRegionChange = async (e) => {
+    const selectedRegion = e.target.value;
+    setEmployeeData({ ...employeeData, Region: selectedRegion });
+    setProvinces([]);
+    setCities([]);
+    setBarangay([]);
+    try {
+      const username = 'innodata_test';
+      const response = await fetch(`http://api.geonames.org/searchJSON?q=${selectedRegion}&featureCode=ADM2&username=${username}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch provinces data');
       }
-    };
+      const data = await response.json();
+      const provinces = data.geonames.map(item => item.name);
+      setProvinces(provinces);
+    } catch (error) {
+      console.error('Error fetching provinces data:', error);
+    }
+  };
 
-    const handleCityChange = async (e) => {
-      const selectedCity = e.target.value;
-      handleInputChange(e); // Update employeeData
-    
-      try {
-        const username = 'innodata_test';
-        // Fetch places (PPL or PPLX) within the selected city/municipality
-        const response = await fetch(`http://api.geonames.org/searchJSON?q=${selectedCity}&featureCode=PPLX&username=${username}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch places data');
-        }
-        
-        const data = await response.json();
-        const barangay = data.geonames.map(item => item.name);
-        console.log('Barangays:', barangay); // Log barangay data
-        setBarangay(barangay);
-        
-        // Autofill zip code based on the first entry (if available)
-        if (data.geonames.length > 0) {
-          const firstBarangay = data.geonames[0].name; // Use the first barangay for zip code lookup
-          const zipCode = await fetchZipCode(selectedCity, firstBarangay);
-          setEmployeeData(prevData => ({
-            ...prevData,
-            ZipCode: zipCode || ''
-          }));
-        }
-      } catch (error) {
-        console.error('Error fetching places data:', error);
+  const handleProvinceChange = async (e) => {
+    const selectedProvince = e.target.value;
+    setEmployeeData({ ...employeeData, Province: selectedProvince });
+    setCities([]);
+    try {
+      const username = 'innodata_test';
+      const provinceResponse = await fetch(`http://api.geonames.org/searchJSON?q=${selectedProvince}&featureCode=PPLA&featureCode=PPLA3&username=${username}`);
+      if (!provinceResponse.ok) {
+        throw new Error('Failed to fetch cities data');
       }
-    };
-    
-    const fetchZipCode = async (city, barangay) => {
-      try {
-        const username = 'innodata_test';
-        const response = await fetch(`http://api.geonames.org/postalCodeSearchJSON?placename=${barangay}&country=PH&adminCode1=&adminCode2=&adminCode3=&username=${username}`);
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch zip code');
-        }
-        
-        const data = await response.json();
-        if (data.postalCodes.length > 0) {
-          return data.postalCodes[0].postalCode; // Return the first zip code found
-        } else {
-          console.warn('No zip code found for the selected barangay');
-          return '';
-        }
-      } catch (error) {
-        console.error('Error fetching zip code:', error);
+      const provinceData = await provinceResponse.json();
+      const provinceCities = provinceData.geonames.map(item => item.name);
+
+      // Fetching highly urbanized cities separately
+      const hucResponse = await fetch(`http://api.geonames.org/searchJSON?country=PH&featureCode=PPL&featureCode=PPLA2&featureCode=PPLA3&featureCode=PPLA4&username=${username}`);
+      if (!hucResponse.ok) {
+        throw new Error('Failed to fetch highly urbanized cities');
+      }
+      const hucData = await hucResponse.json();
+      const hucCities = hucData.geonames
+        .filter(item => item.adminName1 === selectedProvince)
+        .map(item => item.name);
+
+      const allCities = [...new Set([...provinceCities, ...hucCities])];
+      setCities(allCities);
+    } catch (error) {
+      console.error('Error fetching cities data:', error);
+    }
+  };
+
+  const handleCityChange = async (e) => {
+    const selectedCity = e.target.value;
+    setEmployeeData({ ...employeeData, CityMunicipality: selectedCity });
+    try {
+      const username = 'innodata_test';
+      // Fetch places (PPL or PPLX) within the selected city/municipality
+      const response = await fetch(`http://api.geonames.org/searchJSON?q=${selectedCity}&featureCode=PPLX&username=${username}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch places data');
+      }
+      
+      const data = await response.json();
+      const barangays = data.geonames.map(item => item.name);
+      setBarangay(barangays);
+      
+      // Autofill zip code based on the first entry (if available)
+      if (data.geonames.length > 0) {
+        const firstBarangay = data.geonames[0].name; // Use the first barangay for zip code lookup
+        const zipCode = await fetchZipCode(selectedCity, firstBarangay);
+        setEmployeeData(prevData => ({
+          ...prevData,
+          ZipCode: zipCode || ''
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching places data:', error);
+    }
+  };
+  const fetchZipCode = async (city, barangay) => {
+    try {
+      const username = 'innodata_test';
+      const response = await fetch(`http://api.geonames.org/postalCodeSearchJSON?placename=${barangay}&country=PH&adminCode1=&adminCode2=&adminCode3=&username=${username}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch zip code');
+      }
+      
+      const data = await response.json();
+      if (data.postalCodes.length > 0) {
+        return data.postalCodes[0].postalCode; // Return the first zip code found
+      } else {
+        console.warn('No zip code found for the selected barangay');
         return '';
       }
-    };
-    
+    } catch (error) {
+      console.error('Error fetching zip code:', error);
+      return '';
+    }
+  };
+//this handles the complete address autofill
+  const updateCompleteAddress = () => {
+    const { Barangay, CityMunicipality, Province, Country, ZipCode } = employeeData;
+    const completeAddress = `${Barangay}, ${CityMunicipality}, ${Province}, ${Country}, ${ZipCode}`;
+    setEmployeeData({ ...employeeData, CompleteAddress: completeAddress });
+  };
+
     const ensureOption = (options, value) => {
       if (value && !options.includes(value)) {
         return [value, ...options];
@@ -1527,6 +1326,167 @@ const handleFormEmpInfoSubmit = async (e) => {
     const regionsWithExisting = ensureOption(regions, employeeData.Region);
     const provincesWithExisting = ensureOption(provinces, employeeData.Province);
     const citiesWithExisting = ensureOption(cities, employeeData.CityMunicipality);
+
+    //emergency contact address filtering starts here
+    useEffect(() => {
+      fetchECCountries();
+    }, []);
+  //function to fecth the country in geoname api
+    const fetchECCountries = async () => {
+      const username = 'innodata_test'; // GeoNames username
+      try {
+        const response = await fetch(`http://api.geonames.org/countryInfoJSON?username=${username}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch countries');
+        }
+        const data = await response.json();
+        const ECcountries = data.geonames.map(ECcountry => ECcountry.countryName);
+        setECCountries(ECcountries);
+      } catch (error) {
+        console.error('Error fetching countries:', error);
+      }
+    };
+   //function to handle in filtering annd mapping the country
+   const handleECCountryChange = async (e) => {
+    const selectedECCountry = e.target.value;
+    setEmployeeData({ ...employeeData, EmContactCountry: selectedECCountry });
+    setECRegions([]);
+    setECProvinces([]);
+    setECCities([]);
+    setECBarangay([]);
+    try {
+      const username = 'innodata_test';
+      const response = await fetch(`http://api.geonames.org/searchJSON?q=${selectedECCountry}&featureCode=ADM1&username=${username}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch regions data');
+      }
+      const data = await response.json();
+      const regions = data.geonames.map(region => region.name);
+      setECRegions(regions);
+    } catch (error) {
+      console.error('Error fetching regions data:', error);
+    }
+  };
+
+  const handleECRegionChange = async (e) => {
+    const selectedECRegion = e.target.value;
+    setEmployeeData({ ...employeeData, EmContactRegion: selectedECRegion });
+    setECProvinces([]);
+    setECCities([]);
+    setECBarangay([]);
+    try {
+      const username = 'innodata_test';
+      const response = await fetch(`http://api.geonames.org/searchJSON?q=${selectedECRegion}&featureCode=ADM2&username=${username}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch provinces data');
+      }
+      const data = await response.json();
+      const provinces = data.geonames.map(item => item.name);
+      setECProvinces(provinces);
+    } catch (error) {
+      console.error('Error fetching provinces data:', error);
+    }
+  };
+
+  const handleECProvinceChange = async (e) => {
+    const selectedECProvince = e.target.value;
+    setEmployeeData({ ...employeeData, EmContactProvince: selectedECProvince });
+    setECCities([]);
+    try {
+      const username = 'innodata_test';
+      const provinceResponse = await fetch(`http://api.geonames.org/searchJSON?q=${selectedECProvince}&featureCode=PPLA&featureCode=PPLA3&username=${username}`);
+      if (!provinceResponse.ok) {
+        throw new Error('Failed to fetch cities data');
+      }
+      const provinceData = await provinceResponse.json();
+      const provinceCities = provinceData.geonames.map(item => item.name);
+
+      // Fetching highly urbanized cities separately
+      const hucResponse = await fetch(`http://api.geonames.org/searchJSON?country=PH&featureCode=PPL&featureCode=PPLA2&featureCode=PPLA3&featureCode=PPLA4&username=${username}`);
+      if (!hucResponse.ok) {
+        throw new Error('Failed to fetch highly urbanized cities');
+      }
+      const hucData = await hucResponse.json();
+      const hucCities = hucData.geonames
+        .filter(item => item.adminName1 === selectedECProvince)
+        .map(item => item.name);
+
+      const allCities = [...new Set([...provinceCities, ...hucCities])];
+      setCities(allCities);
+    } catch (error) {
+      console.error('Error fetching cities data:', error);
+    }
+  };
+
+  const handleECCityChange = async (e) => {
+    const selectedECCity = e.target.value;
+    setEmployeeData({ ...employeeData, EmContactCityMunicipality: selectedECCity });
+    try {
+      const username = 'innodata_test';
+      // Fetch places (PPL or PPLX) within the selected city/municipality
+      const response = await fetch(`http://api.geonames.org/searchJSON?q=${selectedECCity}&featureCode=PPLX&username=${username}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch places data');
+      }
+      
+      const data = await response.json();
+      const barangays = data.geonames.map(item => item.name);
+      setECBarangay(barangays);
+      
+      // Autofill zip code based on the first entry (if available)
+      if (data.geonames.length > 0) {
+        const firstBarangay = data.geonames[0].name; // Use the first barangay for zip code lookup
+        const zipCode = await fetchECZipCode(selectedECCity, firstBarangay);
+        setEmployeeData(prevData => ({
+          ...prevData,
+          EmContactZipcode: zipCode || ''
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching places data:', error);
+    }
+  };
+  const fetchECZipCode = async (ECcity, ECbarangay) => {
+    try {
+      const username = 'innodata_test';
+      const response = await fetch(`http://api.geonames.org/postalCodeSearchJSON?placename=${ECbarangay}&country=PH&adminCode1=&adminCode2=&adminCode3=&username=${username}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch zip code');
+      }
+      
+      const data = await response.json();
+      if (data.postalCodes.length > 0) {
+        return data.postalCodes[0].postalCode; // Return the first zip code found
+      } else {
+        console.warn('No zip code found for the selected barangay');
+        return '';
+      }
+    } catch (error) {
+      console.error('Error fetching zip code:', error);
+      return '';
+    }
+  };
+
+    //this handles the emergency contact complete address autofill
+    const updateECcompleteAddress = () => {
+      const { EmContactBarangay, EmContactCityMunicipality, EmContactProvince, EmContactRegion, EmContactCountry, EmContactZipcode } = employeeData;
+      const completeAddress = `${EmContactBarangay}, ${EmContactCityMunicipality}, ${EmContactProvince }, ${EmContactRegion}, ${EmContactCountry}, ${EmContactZipcode}`;
+      setEmployeeData({ ...employeeData, EmContactCompleteAddress: completeAddress });
+    };
+
+    const ECensureOption = (options, value) => {
+      if (value && !options.includes(value)) {
+        return [value, ...options];
+      }
+      return options;
+    };
+  
+    const ECcountriesWithExisting = ECensureOption(ECcountries, employeeData.EmContactCountry);
+    const ECregionsWithExisting = ECensureOption(ECregions, employeeData.EmContactRegion);
+    const ECprovincesWithExisting = ECensureOption(ECprovinces, employeeData.EmContactProvince);
+    const ECcitiesWithExisting = ECensureOption(ECcities, employeeData.EmContactCityMunicipality);
 
   //array lists all the fields that are mandatory
   const requiredFields = [
@@ -1689,7 +1649,6 @@ const toSentenceCase = (text) => {
     .join(' '); // Join the words back together
 };
 
-
   if (!employeeData) {
     return <div>Loading...</div>;
   }
@@ -1711,43 +1670,14 @@ const toSentenceCase = (text) => {
                 <i className="fas fa-eye"></i> View Profile
                </button>
                <div className="d-flex align-items-center">
-                <button
-                  className="update-button btn btn-xs mr-2"
-                  onClick={handleNavigateBack}
-                >
-                  <i className="fas fa-arrow-left"></i> Back
-                </button>
+                  <button
+                    className="update-button btn btn-xs mr-2"
+                    onClick={handleNavigateBack}
+                  >
+                    <i className="fas fa-arrow-left"></i> Back
+                  </button>
+                </div>
               </div>
-              {/* <br /> */}
-                    {/* <div className="d-flex align-items-center"> */}
-                    {/* <button
-                        className="update-button btn btn-xs"
-                        onClick={handleDownloadPDF}
-                      >
-                        <i className="fas fa-arrow-down"></i> Download Record
-                      </button> */}
-
-                        {/* <Button variant="primary" onClick={handleDownloadPDF}>
-                        <i className="fas fa-arrow-down"></i> Download Record
-          </Button> */}
-                    {/* </div> */}
-                    </div>
-                {/* <div className='card-body'>
-                <button
-                                      className="seeProfile btn btn-xs mr-2"
-                                      onClick={handleView}
-                                    >
-                                      <i className="fas fa-eye"></i> See Profile
-                                    </button> */}
-              {/* <button
-                                      className="btn btn-xs btn-primary "
-                                      onClick={() =>
-                                        handleViewDetails(employeeData)
-                                      }
-                                    >
-                                      <i className="far fa-eye"></i> View Profile
-                                    </button> */}
-                                    {/* </div> */}
               <div className="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                   <ul className="nav nav-tabs nav-fill">
                       <li className="nav-item">
@@ -1833,7 +1763,15 @@ const toSentenceCase = (text) => {
                                     <div className="col-md-4">
                                               <div className="form-group">
                                               <label htmlFor="birthdate">Birthdate</label>
-                                              <input type="text" className="form-control" value={employeeData.Birthdate} onChange={handleInputChange} name="Birthdate"/>
+                                              {/* <input type="text" className="form-control" value={employeeData.Birthdate} onChange={handleInputChange} name="Birthdate"/> */}
+                                              <input
+                                              type="date"
+                                              className="form-control"
+                                              value={employeeData.Birthdate ? new Date(employeeData.Birthdate).toISOString().substr(0, 10) : ''}
+                                              placeholder="Birth Date"
+                                              name="Birthdate"
+                                              onChange={handleInputChange}
+                                            />
                                               </div>
                                             </div>
                                 </div>
@@ -1928,7 +1866,15 @@ const toSentenceCase = (text) => {
                                     <div className="col-md-4">
                                         <div className="form-group">
                                             <label htmlFor="dateHired">Date Hired</label>
-                                            <input type="text" className="form-control" value={employeeData.DateHired} placeholder="Date Hired" name="DateHired" onChange={handleInputChange} />
+                                            {/* <input type="text" className="form-control" value={employeeData.DateHired} placeholder="Date Hired" name="DateHired" onChange={handleInputChange} /> */}
+                                            <input
+                                              type="date"
+                                              className="form-control"
+                                              value={employeeData.DateHired ? new Date(employeeData.DateHired).toISOString().substr(0, 10) : ''}
+                                              placeholder="Date Hired"
+                                              name="DateHired"
+                                              onChange={handleInputChange}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -2114,7 +2060,7 @@ const toSentenceCase = (text) => {
                                               <div className="form-group">
                                               <label htmlFor="facility">Facility</label>
                                               <select className="form-control" value={employeeData.Facility} name="Facility" onChange={handleInputChange}>
-                                                        <option value="Cebu">Cebu</option>
+                                                        <option value="Mandaue">Mandaue</option>
                                                         <option value="Manila">Manila</option>
                                                         <option value="Legazpi">Legazpi</option>
                                                     </select>
@@ -2162,39 +2108,39 @@ const toSentenceCase = (text) => {
                                                         <option value="C9 ">C9</option>
                                                         <option value="F40">F40</option>
                                                         <option value="F43">F43</option>
-                                                        <option value="HB"></option>
-                                                        <option value="F1"></option>
-                                                        <option value="F4"></option>
-                                                        <option value="N1"></option>
-                                                        <option value="F13"></option>
-                                                        <option value="F3"></option>
-                                                        <option value="F18"></option>
-                                                        <option value="N2"></option>
-                                                        <option value="F55"></option>
-                                                        <option value="F77"></option>
-                                                        <option value="N9"></option>
-                                                        <option value="F41"></option>
-                                                        <option value="F46"></option>
-                                                        <option value="C1"></option>
-                                                        <option value="F81"></option>
-                                                        <option value="N10"></option>
-                                                        <option value="N3"></option>
-                                                        <option value="F62"></option>
-                                                        <option value="F48"></option>
-                                                        <option value="C7"></option>
-                                                        <option value="F7"></option>
-                                                        <option value="F86"></option>
-                                                        <option value="F69"></option>
-                                                        <option value="F12"></option>
-                                                        <option value="G79"></option>
-                                                        <option value="G59"></option>
-                                                        <option value="C10"></option>
-                                                        <option value="F2"></option>
-                                                        <option value="F61"></option>
-                                                        <option value="G4"></option>
-                                                        <option value="N4"></option>
-                                                        <option value="N8"></option>
-                                                        <option value="C2"></option>
+                                                        <option value="HB">HB</option>
+                                                        <option value="F1">F1</option>
+                                                        <option value="F4">F4</option>
+                                                        <option value="N1">N1</option>
+                                                        <option value="F13">F13</option>
+                                                        <option value="F3">F3</option>
+                                                        <option value="F18">F18</option>
+                                                        <option value="N2">N2</option>
+                                                        <option value="F55">F55</option>
+                                                        <option value="F77">F77</option>
+                                                        <option value="N9">N9</option>
+                                                        <option value="F41">F41</option>
+                                                        <option value="F46">F46</option>
+                                                        <option value="C1">C1</option>
+                                                        <option value="F81">F81</option>
+                                                        <option value="N10">N10</option>
+                                                        <option value="N3">N3</option>
+                                                        <option value="F62">F62</option>
+                                                        <option value="F48">F48</option>
+                                                        <option value="C7">C7</option>
+                                                        <option value="F7">F7</option>
+                                                        <option value="F86">F86</option>
+                                                        <option value="F69">F69</option>
+                                                        <option value="F12">F12</option>
+                                                        <option value="G79">G79</option>
+                                                        <option value="G59">G59</option>
+                                                        <option value="C10">C10</option>
+                                                        <option value="F2">F2</option>
+                                                        <option value="F61">F61</option>
+                                                        <option value="G4">G4</option>
+                                                        <option value="N4">N4</option>
+                                                        <option value="N8">N8</option>
+                                                        <option value="C2">C2</option>
                                                         <option value="N6">N6</option>
                                                         <option value="C6">C6</option>
                                                         <option value="F15">F15</option>
@@ -2227,9 +2173,8 @@ const toSentenceCase = (text) => {
                                                         <option value="F80">F80</option>
                                                         <option value="F74">F74</option>
                                                         <option value="F59">F59</option>
-                                                        <option value="F6">F6 </option>
+                                                        <option value="F6">F6</option>
                                                     </select>
-                                              {/* <input type="text" className="form-control" value={employeeData.EmployeeCategory} placeholder="enter work Week Type" name="EmployeeCategory" onChange={handleInputChange} /> */}
                                               </div>
                                             </div>
                                             <div className="col-md-4">
@@ -3567,11 +3512,87 @@ const toSentenceCase = (text) => {
                       </div>
                       <div className="tab-pane fade" id="address" role="tabpanel" aria-labelledby="address-tab">
                           {/* Address Form */}
-                        <div className="container">
+                          <div className="container">
+                            <h5 className="text-primary">Contact Details</h5>
+                            <hr className="hr-cobalt-blue" />
+                            <br />
+                            <div className="row">
+                              <form onSubmit={handleFormSubmit}>
+                                <div className="form-group">
+                                  <label>Update Contact Number</label>
+                                  <div className="d-flex align-items-center">
+                                    <input
+                                      type="tel"
+                                      className={`form-control ${contactError && 'is-invalid'}`}
+                                      value={employeeData.ContactNumber}
+                                      placeholder="update contact number"
+                                      name="ContactNumber"
+                                      onChange={handleInputChange}
+                                    />
+                                    {contactError && <div className="invalid-feedback">{contactError}</div>}
+                                    <button type="submit" className="btn btn-primary">
+                                      <i className="fas fa-pencil-alt"></i>
+                                    </button>
+                                  </div>
+                                </div>
+                              </form>
+                              {employeeData.SecondaryContactNum && employeeData.SecondaryContactNum !== 'N/A' && (
+                                <div className="col-md-4">
+                                  <div>
+                                    <label>Secondary Contact Number</label>
+                                    <span className="form-control">{employeeData.SecondaryContactNum}</span>
+                                  </div>
+                                </div>
+                              )}
+                              <div className="col-md-4">
+                                <form onSubmit={handleAddContactForm}>
+                                  <div className="form-group">
+                                    {employeeData.SecondaryContactNum ? (
+                                      <>
+                                        <label>Update Secondary Contact Number</label>
+                                        <div className="d-flex align-items-center">
+                                          <input
+                                            type="tel"
+                                            className={`form-control mr-2 ${secondarycontactError && 'is-invalid'}`}
+                                            value={employeeData.newContactNumber}
+                                            placeholder="update contact number"
+                                            name="newContactNumber"
+                                            onChange={handleInputChange}
+                                          />
+                                          {secondarycontactError && <div className="invalid-feedback">{secondarycontactError}</div>}
+                                          <button type="submit" className="btn btn-primary">
+                                            <i className="fas fa-pencil-alt"></i>
+                                          </button>
+                                        </div>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <label>Add New Contact Number</label>
+                                        <div className="d-flex align-items-center">
+                                          <input
+                                            type="tel"
+                                            className={`form-control mr-2 ${newcontactError && 'is-invalid'}`}
+                                            value={employeeData.newContactNumber}
+                                            placeholder="add new contact number"
+                                            name="newContactNumber"
+                                            onChange={handleInputChange}
+                                          />
+                                          {newcontactError && <div className="invalid-feedback">{newcontactError}</div>}
+                                          <button type="submit" className="btn btn-primary">
+                                            <i className="fas fa-plus"></i>
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                </form>
+                              </div>
+                            </div>
+                        {/* <div className="container">
                           <h5 className='text-primary'>Contact Details</h5>
                                 <hr className="hr-cobalt-blue"/>
                                 <br/>
-                                <div className="row">
+                              <div className="row">
                                 <form onSubmit={handleFormSubmit}>
                                   <div className="form-group">
                                     <label>Update Contact Number</label>
@@ -3589,27 +3610,10 @@ const toSentenceCase = (text) => {
                                     </div>
                                   </div>
                                 </form>
-                                    {/* <div className="col-md-4">
-                                    <form onSubmit={handleAddContactForm}>
-                                      <div>
-                                        <label >Primary Contact Number</label>
-                                        <span className='form-control'>{employeeData.ContactNumber}</span>
-                                      </div>
-                                      </form>
-                                    </div> */}
                                     {employeeData.SecondaryContactNum && employeeData.SecondaryContactNum !== "N/A" && (
                                     <div className="col-md-4">
                                       <div>
                                         <label>Secondary Contact Number</label>
-                                        {/* <input 
-                                        type="tel" 
-                                        className="form-control mr-2" 
-                                        value={employeeData.SecondaryContactNum} 
-                                        placeholder="update contact number" 
-                                        name="SecondaryContactNum" 
-                                        onChange={handleInputChange} 
-                                      /> */}
-                                      {/* <button type="submit" onSubmit={handleAddContactForm} className="btn btn-primary">Update</button> */}
                                         <span className='form-control'>{employeeData.SecondaryContactNum}</span>
                                       </div>
                                     </div>
@@ -3654,33 +3658,32 @@ const toSentenceCase = (text) => {
                                         )}
                                       </div>
                                     </form>
-                                  </div>
-
-                                  </div>
+                                  </div> 
+                                  </div>*/}
                                     <hr/>
-                                    <form onSubmit={handleAddressFormSubmit}>
-                                      <h5 className='text-primary'>Address Details</h5>
-                                      <hr className="hr-cobalt-blue"/>
-                                      <br/>
-                                      <div className="row">
-                                        <div className="col-md-4">
-                                          <div className="form-group">
-                                            <label htmlFor="houseNumber">House Number</label>
-                                            <input type="text" className="form-control" placeholder="enter house number" value={employeeData.HouseNumber} name="HouseNumber" onChange={handleInputChange} />
+                                      <form onSubmit={handleAddressFormSubmit}>
+                                        <h5 className='text-primary'>Address Details</h5>
+                                        <hr className="hr-cobalt-blue"/>
+                                        <br/>
+                                        <div className="row">
+                                          <div className="col-md-4">
+                                            <div className="form-group">
+                                              <label htmlFor="houseNumber">House Number</label>
+                                              <input type="text" className="form-control" placeholder="enter house number" value={employeeData.HouseNumber} name="HouseNumber" onChange={handleInputChange} />
+                                            </div>
+                                          </div>
+                                          <div className="col-md-8">
+                                            <div className="form-group">
+                                              <label htmlFor="completeAddress">Complete Address</label>
+                                              <input type="text" className="form-control" placeholder="Enter Complete Address" name="CompleteAddress" value={employeeData.CompleteAddress} onChange={handleInputChange} />
+                                            </div>
                                           </div>
                                         </div>
-                                        <div className="col-md-8">
-                                          <div className="form-group">
-                                            <label htmlFor="completeAddress">Complete Address</label>
-                                            <input type="text" className="form-control" placeholder="Enter Complete Address" name="CompleteAddress" value={employeeData.CompleteAddress} onChange={handleInputChange} />
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <div className="row justify-content-center">
-                                        <div className="col-md-4">
-                                          <div className="form-group">
-                                            <label htmlFor="country">Country</label>
-                                            <select
+                                        <div className="row justify-content-center">
+                                          <div className="col-md-4">
+                                            <div className="form-group">
+                                              <label htmlFor="country">Country</label>
+                                              <select
                                                 id="countryDropdown"
                                                 className="form-control"
                                                 value={employeeData.Country || ""}
@@ -3690,113 +3693,117 @@ const toSentenceCase = (text) => {
                                                 {countriesWithExisting.map(country => (
                                                   <option key={country} value={country}>{country}</option>
                                                 ))}
-                                            </select>
+                                              </select>
+                                            </div>
+                                          </div>
+                                          <div className="col-md-4">
+                                            <div className="form-group">
+                                              <label htmlFor="region">Region</label>
+                                              <select
+                                                id="regionDropdown"
+                                                className="form-control"
+                                                value={employeeData.Region || ""}
+                                                name="Region"
+                                                onChange={handleRegionChange}
+                                              >
+                                                {regionsWithExisting.map(region => (
+                                                  <option key={region} value={region}>{region}</option>
+                                                ))}
+                                              </select>
+                                            </div>
+                                          </div>
+                                          <div className="col-md-4">
+                                            <div className="form-group">
+                                              <label htmlFor="province">Province</label>
+                                              <select
+                                                id="provinceDropdown"
+                                                className="form-control"
+                                                value={employeeData.Province || ""}
+                                                name="Province"
+                                                onChange={handleProvinceChange}
+                                              >
+                                                {provincesWithExisting.map(province => (
+                                                  <option key={province} value={province}>{province}</option>
+                                                ))}
+                                              </select>
+                                              {addressErrors.Province && <div className="text-danger">{addressErrors.Province}</div>}
+                                            </div>
                                           </div>
                                         </div>
-                                     <div className="col-md-4">
-                                        <div className="form-group">
-                                          <label htmlFor="region">Region</label>
-                                          <select
-                                              id="regionDropdown"
-                                              className="form-control"
-                                              value={employeeData.Region || ""}
-                                              name="Region"
-                                              onChange={handleRegionChange}
-                                            >
-                                              {regionsWithExisting.map(region => (
-                                                <option key={region} value={region}>{region}</option>
-                                              ))}
-                                            </select>
+                                        <div className="row justify-content-center">
+                                          <div className="col-md-4">
+                                            <div className="form-group">
+                                              <label htmlFor="cityMunicipality">City / Municipality</label>
+                                              <select
+                                                id="cityDropdown"
+                                                className="form-control"
+                                                value={employeeData.CityMunicipality || ""}
+                                                name="CityMunicipality"
+                                                onChange={handleCityChange}
+                                              >
+                                                {citiesWithExisting.map(city => (
+                                                  <option key={city} value={city}>{city}</option>
+                                                ))}
+                                              </select>
+                                              {addressErrors.CityMunicipality && <div className="text-danger">{addressErrors.CityMunicipality}</div>}
+                                            </div>
+                                          </div>
+                                          <div className="col-md-4">
+                                            <div className="form-group">
+                                              <label htmlFor="brgy">Barangay</label>
+                                              <input type="text" className="form-control" placeholder="Enter Barangay" name="Barangay" value={employeeData.Barangay} onChange={handleInputChange} />
+                                              {addressErrors.Barangay && <div className="text-danger">{addressErrors.Barangay}</div>}
+                                            </div>
+                                          </div>
+                                          <div className="col-md-4">
+                                            <div className="form-group">
+                                              <label htmlFor="zipcode">Zip Code</label>
+                                              <input
+                                                type="text"
+                                                className="form-control"
+                                                placeholder="Enter Zip Code"
+                                                name="ZipCode"
+                                                value={employeeData.ZipCode}
+                                                onChange={handleInputChange}
+                                              />
+                                              {addressErrors.ZipCode && <div className="text-danger">{addressErrors.ZipCode }</div>}
+                                            </div>
+                                          </div>
+                                          {/* <div className="col-md-4">
+                                            <div className="form-group">
+                                              <label htmlFor="zipcode">Zip Code</label>
+                                              <input type="text" className="form-control" placeholder="Enter Zip Code" name="ZipCode" value={employeeData.ZipCode} onChange={handleInputChange} />
+                                            </div>
+                                          </div> */}
                                         </div>
-                                      </div>
-                                      <div className="col-md-4">
-                                        <div className="form-group">
-                                          <label htmlFor="province">Province</label>
-                                          <select
-                                              id="provinceDropdown"
-                                              className="form-control"
-                                              value={employeeData.Province || ""}
-                                              name="Province"
-                                              onChange={handleProvinceChange}
-                                            >
-                                              {provincesWithExisting.map(province => (
-                                                <option key={province} value={province}>{province}</option>
-                                              ))}
-                                            </select>
-                                        </div>
-                                      </div>
-                                      </div>
-                                      <div className="row justify-content-center">
-                                      <div className="col-md-4">
-                                          <div className="form-group">
-                                            <label htmlFor="cityMunicipality">City / Municipality</label>
-                                                 <select
-                                                    id="cityDropdown"
-                                                    className="form-control"
-                                                    value={employeeData.CityMunicipality || ""}
-                                                    name="CityMunicipality"
-                                                    onChange={handleCityChange}
-                                                  >
-                                                    {citiesWithExisting.map(city => (
-                                                      <option key={city} value={city}>{city}</option>
-                                                    ))}
-                                                  </select>
+                                        <div className="row justify-content-center">
+                                          <div className="col-md-4">
+                                            <div className="form-group">
+                                              <label htmlFor="landmark">Land Mark</label>
+                                              <input type="text" className="form-control" placeholder="Enter Land Mark" name="Landmark" value={employeeData.Landmark} onChange={handleInputChange} />
+                                            </div>
+                                          </div>
+                                          <div className="col-md-4">
+                                            <div className="form-group">
+                                              <label htmlFor="isPermanent">is Permanent</label>
+                                              <select className="form-control" value={employeeData.IsPermanent} name="IsPermanent" onChange={handleInputChange}>
+                                                <option value={true}>Yes</option>
+                                                <option value={false}>No</option>
+                                              </select>
+                                            </div>
+                                          </div>
+                                          <div className="col-md-4">
+                                            <div className="form-group">
+                                              <label htmlFor="isEmergency">is Emergency</label>
+                                              <select className="form-control" value={employeeData.IsEmergency} name="IsEmergency" onChange={handleInputChange}>
+                                                <option value={true}>Yes</option>
+                                                <option value={false}>No</option>
+                                              </select>
+                                            </div>
                                           </div>
                                         </div>
-                                        <div className="col-md-4">
-                                          <div className="form-group">
-                                            <label htmlFor="brgy">Barangay</label>
-                                             <input type="text" className="form-control" placeholder="Enter Barangay" name="Barangay" value={employeeData.Barangay} onChange={handleInputChange} />
-                                          </div>
-                                        </div>
-                                        <div className="col-md-4">
-                                          <div className="form-group">
-                                            <label htmlFor="zipcode">Zip Code</label>
-                                            <input
-                                              type="text"
-                                              className="form-control"
-                                              placeholder="Enter Zip Code"
-                                              name="ZipCode"
-                                              value={employeeData.ZipCode}
-                                              onChange={handleInputChange}
-                                            />
-                                          </div>
-                                        </div>
-                                        {/* <div className="col-md-4">
-                                          <div className="form-group">
-                                            <label htmlFor="zipcode">Zip Code</label>
-                                            <input type="text" className="form-control" placeholder="Enter Zip Code" name="ZipCode" value={employeeData.ZipCode} onChange={handleInputChange} />
-                                          </div>
-                                        </div> */}
-                                      </div>
-                                      <div className="row justify-content-center">
-                                        <div className="col-md-4">
-                                          <div className="form-group">
-                                            <label htmlFor="landmark">Land Mark</label>
-                                            <input type="text" className="form-control" placeholder="Enter Land Mark" name="Landmark" value={employeeData.Landmark} onChange={handleInputChange} />
-                                          </div>
-                                        </div>
-                                        <div className="col-md-4">
-                                          <div className="form-group">
-                                            <label htmlFor="isPermanent">is Permanent</label>
-                                            <select className="form-control" value={employeeData.IsPermanent} name="IsPermanent" onChange={handleInputChange}>
-                                              <option value={true}>Yes</option>
-                                              <option value={false}>No</option>
-                                            </select>
-                                          </div>
-                                        </div>
-                                        <div className="col-md-4">
-                                          <div className="form-group">
-                                            <label htmlFor="isEmergency">is Emergency</label>
-                                            <select className="form-control" value={employeeData.IsEmergency} name="IsEmergency" onChange={handleInputChange}>
-                                              <option value={true}>Yes</option>
-                                              <option value={false}>No</option>
-                                            </select>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <button type="submit" className="btn btn-primary d-block mx-auto">Save Changes</button>
-                                    </form>
+                                        <button type="submit" className="btn btn-primary d-block mx-auto">Save Changes</button>
+                                      </form>
                             <hr/>
                             <h5 className='text-primary'>Emergency Contact Details</h5>
                                 <hr className="hr-cobalt-blue"/>
@@ -3813,61 +3820,119 @@ const toSentenceCase = (text) => {
                                     <div className="col-md-4">
                                       <div className="form-group">
                                           <label>Phone Number</label>
-                                          <input type="text" className="form-control" value={employeeData.EmContactPhoneNumber} placeholder="Enter contact number" name="EmContactPhoneNumber" onChange={handleInputChange} />
+                                          <input 
+                                            type="text" 
+                                            className={`form-control ${EMphoneError ? 'is-invalid' : ''}`} 
+                                            value={employeeData.EmContactPhoneNumber} 
+                                            placeholder="Enter contact number" 
+                                            name="EmContactPhoneNumber" 
+                                            onChange={handleInputChange} 
+                                        />
+                                        {EMphoneError && <div className="invalid-feedback">{EMphoneError}</div>}
+                                          {/* <input type="text" className="form-control" value={employeeData.EmContactPhoneNumber} placeholder="Enter contact number" name="EmContactPhoneNumber" onChange={handleInputChange} /> */}
                                       </div>
                                   </div>
                                   <div className="col-md-4">
-                                        <div className="form-group">
-                                            <label>Complete Address</label>
-                                            <input type="text" className="form-control" value={employeeData.EmContactCompleteAddress} placeholder="Enter complete address" name="EmContactCompleteAddress" onChange={handleInputChange} />
-                                        </div>
-                                    </div>
-                                    </div>
-                                    <div className="row justify-content-center">
-                                    <div className="col-md-4">
                                         <div className="form-group">
                                             <label>House Number</label>
                                             <input type="text" className="form-control" value={employeeData.EmContactHouseNo} placeholder="Enter house number" name="EmContactHouseNo" onChange={handleInputChange} />
                                         </div>
                                     </div>
+                                </div>
+                                <div className="row">
+                                    <div className="col-md-8">
+                                        <div className="form-group">
+                                            <label>Complete Address</label>
+                                            <input type="text" className="form-control" value={employeeData.EmContactCompleteAddress} placeholder="Enter complete address" name="EmContactCompleteAddress" onChange={handleInputChange} />
+                                        </div>
+                                    </div>
+                                    <div className="col-md-4">
+                                        <div className="form-group">
+                                            <label>Country</label>
+                                            {/* <input type="text" className="form-control" value={employeeData.EmContactCountry} placeholder="Enter Country" name="EmContactCountry" onChange={handleInputChange} /> */}
+                                            <select
+                                                id="countryDropdown"
+                                                className="form-control"
+                                                value={employeeData.EmContactCountry || ""}
+                                                name="EmContactCountry"
+                                                onChange={handleECCountryChange}
+                                              >
+                                                {ECcountriesWithExisting.map(country => (
+                                                  <option key={country} value={country}>{country}</option>
+                                                ))}
+                                              </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="row justify-content-center">
+                                    <div className="col-md-4">
+                                        <div className="form-group">
+                                            <label>Region</label>
+                                            {/* <input type="text" className="form-control" value={employeeData.EmContactRegion} placeholder="Enter Region" name="EmContactRegion" onChange={handleInputChange} /> */}
+                                            <select
+                                                id="regionDropdown"
+                                                className="form-control"
+                                                value={employeeData.EmContactRegion || ""}
+                                                name="EmContactRegion"
+                                                onChange={handleECRegionChange}
+                                              >
+                                                {ECregionsWithExisting.map(region => (
+                                                  <option key={region} value={region}>{region}</option>
+                                                ))}
+                                              </select>
+                                              {ECaddressErrors.EmContactRegion && <div className="text-danger">{ECaddressErrors.EmContactRegion}</div>}
+                                        </div>
+                                    </div>
+                                    <div className="col-md-4">
+                                        <div className="form-group">
+                                            <label>Province</label>
+                                            {/* <input type="text" className="form-control" value={employeeData.EmContactProvince} placeholder="Enter province" name="EmContactProvince" onChange={handleInputChange} /> */}
+                                            <select
+                                                id="provinceDropdown"
+                                                className="form-control"
+                                                value={employeeData.EmContactProvince || ""}
+                                                name="EmContactProvince"
+                                                onChange={handleECProvinceChange}
+                                              >
+                                                {ECprovincesWithExisting.map(province => (
+                                                  <option key={province} value={province}>{province}</option>
+                                                ))}
+                                              </select>
+                                              {ECaddressErrors.EmContactProvince && <div className="text-danger">{ECaddressErrors.EmContactProvince}</div>}
+                                       </div>
+                                    </div>
+                                    <div className="col-md-4">
+                                        <div className="form-group">
+                                            <label>City / Municipality</label>
+                                            {/* <input type="text" className="form-control" value={employeeData.EmContactCityMunicipality} placeholder="Enter city/municipality" name="EmContactCityMunicipality" onChange={handleInputChange} /> */}
+                                            <select
+                                                id="cityDropdown"
+                                                className="form-control"
+                                                value={employeeData.EmContactCityMunicipality || ""}
+                                                name="EmContactCityMunicipality"
+                                                onChange={handleECCityChange}
+                                              >
+                                                {ECcitiesWithExisting.map(city => (
+                                                  <option key={city} value={city}>{city}</option>
+                                                ))}
+                                              </select>
+                                              {ECaddressErrors.EmContactCityMunicipality && <div className="text-danger">{ECaddressErrors.EmContactCityMunicipality}</div>}
+                                        </div>
+                                    </div>
+                                </div>
+                                  <div className="row justify-content-center">
                                     <div className="col-md-4">
                                         <div className="form-group">
                                             <label>Barangay</label>
                                             <input type="text" className="form-control" value={employeeData.EmContactBarangay} placeholder="Enter Barangay" name="EmContactBarangay" onChange={handleInputChange} />
+                                            {ECaddressErrors.EmContactBarangay && <div className="text-danger">{ECaddressErrors.EmContactBarangay}</div>}
                                         </div>
                                     </div>
-                                  <div className="col-md-4">
-                                        <div className="form-group">
-                                            <label>City / Municipality</label>
-                                            <input type="text" className="form-control" value={employeeData.EmContactCityMunicipality} placeholder="Enter city/municipality" name="EmContactCityMunicipality" onChange={handleInputChange} />
-                                        </div>
-                                    </div>
-                                    </div>
-                                    <div className="row justify-content-center">
-                                    <div className="col-md-4">
-                                        <div className="form-group">
-                                            <label>Province</label>
-                                            <input type="text" className="form-control" value={employeeData.EmContactProvince} placeholder="Enter province" name="EmContactProvince" onChange={handleInputChange} />
-                                        </div>
-                                    </div>
-                                    <div className="col-md-4">
-                                        <div className="form-group">
-                                            <label>Region</label>
-                                            <input type="text" className="form-control" value={employeeData.EmContactRegion} placeholder="Enter Region" name="EmContactRegion" onChange={handleInputChange} />
-                                        </div>
-                                    </div>
-                                  <div className="col-md-4">
-                                        <div className="form-group">
-                                            <label>Country</label>
-                                            <input type="text" className="form-control" value={employeeData.EmContactCountry} placeholder="Enter Country" name="EmContactCountry" onChange={handleInputChange} />
-                                        </div>
-                                    </div>
-                                    </div>
-                                    <div className="row justify-content-center">
                                     <div className="col-md-4">
                                         <div className="form-group">
                                             <label>Zip Code</label>
                                             <input type="text" className="form-control" value={employeeData.EmContactZipcode} placeholder="Enter zip code" name="EmContactZipcode" onChange={handleInputChange} />
+                                            {ECaddressErrors.EmContactZipcode && <div className="text-danger">{ECaddressErrors.EmContactZipcode}</div>}
                                         </div>
                                     </div>
                                     <div className="col-md-4">
@@ -3876,6 +3941,8 @@ const toSentenceCase = (text) => {
                                             <input type="text" className="form-control" value={employeeData.EmContactLandMark} placeholder="Enter landmark" name="EmContactLandMark" onChange={handleInputChange} />
                                         </div>
                                     </div>
+                                  </div>
+                                  <div className="row">
                                     <div className="col-md-4">
                                         <div className="form-group">
                                             <label>Is Permanent</label>
@@ -3885,7 +3952,7 @@ const toSentenceCase = (text) => {
                                             </select>
                                         </div>
                                     </div>
-                                  <div className="col-md-4">
+                                    <div className="col-md-4">
                                         <div className="form-group">
                                             <label>Is Emergency</label>
                                             <select className="form-control" value={employeeData.Is_Emergency} name="Is_Emergency" onChange={handleInputChange}>
@@ -3893,9 +3960,9 @@ const toSentenceCase = (text) => {
                                                 <option value={false}>No</option>
                                             </select>
                                         </div>
-                                    </div>
-                                    </div>
-                                    </div>
+                                      </div>
+                                   </div>
+                                </div>
                                 <br/>
                                 <button type="submit" className="btn btn-primary d-block mx-auto">Save Changes</button>
                             </form>
@@ -3952,13 +4019,29 @@ const toSentenceCase = (text) => {
                                     <div className="col-md-4">
                                         <div className="form-group">
                                             <label htmlFor="dateFrom">Date From</label>
-                                            <input type="text" className="form-control" value={employeeData.DateFrom} placeholder="Enter date From" name="DateFrom" onChange={handleInputChange} />
+                                            {/* <input type="text" className="form-control" value={employeeData.DateFrom} placeholder="Enter date From" name="DateFrom" onChange={handleInputChange} /> */}
+                                            <input
+                                              type="date"
+                                              className="form-control"
+                                              value={employeeData.DateFrom ? new Date(employeeData.DateFrom).toISOString().substr(0, 10) : ''}
+                                              placeholder="Date From"
+                                              name="DateFrom"
+                                              onChange={handleInputChange}
+                                            />
                                         </div>
                                     </div>
                                     <div className="col-md-4">
                                         <div className="form-group">
                                         <label htmlFor="dateTo">Date To</label>
-                                            <input type="text" className="form-control" value={employeeData.DateTo} placeholder="Enter date To" name="DateTo" onChange={handleInputChange} />
+                                            {/* <input type="text" className="form-control" value={employeeData.DateTo} placeholder="Enter date To" name="DateTo" onChange={handleInputChange} /> */}
+                                            <input
+                                              type="date"
+                                              className="form-control"
+                                              value={employeeData.DateTo ? new Date(employeeData.DateTo).toISOString().substr(0, 10) : ''}
+                                              placeholder="Date To"
+                                              name="BirthdDateToate"
+                                              onChange={handleInputChange}
+                                            />
                                         </div>
                                     </div>
                                     <div className="col-md-4">
@@ -5379,7 +5462,6 @@ const toSentenceCase = (text) => {
                         </div>
                       </div>
                   </div>
-                  
               </div>
               </div>
               </div>

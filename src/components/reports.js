@@ -5,10 +5,7 @@ import Footer from "./footer";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
 import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
-import ExcelJS from 'exceljs';
 import axios from "axios";
-import { createRenderer } from "react-dom/test-utils";
 
 const Reports = () => {
   const navigate = useNavigate();
@@ -197,7 +194,6 @@ const handleDownloadExcel = async () => {
     alert("Failed to download data. Please try again.");
   }
 };
-
   
   return (
     <div>
@@ -323,7 +319,7 @@ const handleDownloadExcel = async () => {
                                     </span>
                                   </td>
                                   <td>{employee.EmploymentStatus}</td>
-                                  <td>{employee.DateHired}</td>
+                                  <td>{employee.DateHired ? new Date(employee.DateHired).toLocaleDateString() : 'N/A'}</td>
                                   <td>{employee.EmployeeRole}</td>
                                   <td>{employee.Position}</td>
                                   <td>{employee.Level}</td>
