@@ -124,9 +124,9 @@ import 'jspdf-autotable';
   const [ECbarangay, setECBarangay] = useState([]);
     // Initialize state for phone number and validation error
   const [EMphoneError, setEmPhoneError] = useState('');
-  const [contactError, setcontactError] = useState('');
-  const [secondarycontactError, setsecondarycontactError] = useState('');
-  const [newcontactError, setnewcontactError] = useState('');
+  const [contactError, setContactError] = useState('');
+  const [secondaryContactError, setSecondaryContactError] = useState('');
+  const [newContactError, setNewContactError] = useState('');
   
   //handles to validate address
   const validateAddressForm = () => {
@@ -144,7 +144,8 @@ import 'jspdf-autotable';
   
   useEffect(() => {
     updateCompleteAddress();
-  }, [employeeData.Barangay, employeeData.CityMunicipality, employeeData.Province, employeeData.Country, employeeData.ZipCode]);
+  }, [ employeeData.Landmark, employeeData.Barangay, employeeData.CityMunicipality, 
+    employeeData.Province, employeeData.Region, employeeData.Country, employeeData.ZipCode]);
 
 //handles to validate Emergency contact address
   const validateECAddressForm = () => {
@@ -162,7 +163,8 @@ import 'jspdf-autotable';
   
   useEffect(() => {
     updateECcompleteAddress();
-  }, [employeeData.EmContactBarangay, employeeData.EmContactCityMunicipality, employeeData.EmContactProvince, employeeData.EmContactRegion, employeeData.EmContactCountry, employeeData.EmContactZipcode]);
+  }, [employeeData.EmContactLandMark, employeeData.EmContactBarangay, employeeData.EmContactCityMunicipality, employeeData.EmContactProvince, 
+    employeeData.EmContactRegion, employeeData.EmContactCountry, employeeData.EmContactZipcode]);
 
     // Function to handle input change in the search field
   const handleSearchChange = (e) => {
@@ -427,24 +429,20 @@ const handleInputChange = (e) => {
       default:
         break;
     }
-  //   // Phone number validation
-  //   if (name === 'EmContactPhoneNumber' || name === 'ContactNumber' || name === 'SecondaryContactNum') {
-  //     // Regex to allow only numbers 
-  //     const numberRegex = /^[0-9]*$/;
-
-  //     if (!numberRegex.test(value)) {
-  //         setphoneError('Phone number must only contain numbers');
-  //     } else if (value.length > 11) {
-  //         setphoneError('Phone number cannot exceed 11 digits');
-  //     } else {
-  //         setphoneError('');
-  //     }
-  // }
-
-    // Phone number validation
-    if (name === 'EmContactPhoneNumber' || name === 'ContactNumber' || name === 'SecondaryContactNum' || name === 'newContactNumber') {
-      error = validatePhoneNumber(value);
-    }
+        // Phone number validation
+        if (name === 'EmContactPhoneNumber') {
+          error = validatePhoneNumber(value);
+          setEmPhoneError(error);
+        } else if (name === 'ContactNumber') {
+          error = validatePhoneNumber(value);
+          setContactError(error);
+        } else if (name === 'SecondaryContactNum') {
+          error = validatePhoneNumber(value);
+          setSecondaryContactError(error);
+        } else if (name === 'newContactNumber') {
+          error = validatePhoneNumber(value);
+          setNewContactError(error);
+        }
 
     setEmployeeData({
       ...employeeData,
@@ -454,14 +452,6 @@ const handleInputChange = (e) => {
       // Reset otherHRANType if it's not the "Others" option
       if (name === 'HRANType' && value !== 'Others') {
         setOtherHRANType('');
-    }
-     // Set the error state based on validation
-    if (name === 'EmContactPhoneNumber' || name === 'ContactNumber' || name === 'SecondaryContactNum' || name === 'newContactNumber') {
-      setEmPhoneError(error);
-      setcontactError(error);
-      setsecondarycontactError(error);
-      setnewcontactError(error);
-
     }
   };
 
@@ -1310,8 +1300,8 @@ const handleFormEmpInfoSubmit = async (e) => {
   };
 //this handles the complete address autofill
   const updateCompleteAddress = () => {
-    const { Barangay, CityMunicipality, Province, Country, ZipCode } = employeeData;
-    const completeAddress = `${Barangay}, ${CityMunicipality}, ${Province}, ${Country}, ${ZipCode}`;
+    const { Landmark, Barangay, CityMunicipality, Province, Region, Country, ZipCode } = employeeData;
+    const completeAddress = `${Landmark}, ${Barangay}, ${CityMunicipality}, ${Region}, ${Province}, ${Country}, ${ZipCode}`;
     setEmployeeData({ ...employeeData, CompleteAddress: completeAddress });
   };
 
@@ -1396,7 +1386,7 @@ const handleFormEmpInfoSubmit = async (e) => {
       const username = 'innodata_test';
       const provinceResponse = await fetch(`http://api.geonames.org/searchJSON?q=${selectedECProvince}&featureCode=PPLA&featureCode=PPLA3&username=${username}`);
       if (!provinceResponse.ok) {
-        throw new Error('Failed to fetch cities data');
+        throw new Error('Failed to fetch emergency contact city/municipality data');
       }
       const provinceData = await provinceResponse.json();
       const provinceCities = provinceData.geonames.map(item => item.name);
@@ -1412,9 +1402,9 @@ const handleFormEmpInfoSubmit = async (e) => {
         .map(item => item.name);
 
       const allCities = [...new Set([...provinceCities, ...hucCities])];
-      setCities(allCities);
+      setECCities(allCities);
     } catch (error) {
-      console.error('Error fetching cities data:', error);
+      console.error('Error fetching city/municipality data:', error);
     }
   };
 
@@ -1471,8 +1461,8 @@ const handleFormEmpInfoSubmit = async (e) => {
 
     //this handles the emergency contact complete address autofill
     const updateECcompleteAddress = () => {
-      const { EmContactBarangay, EmContactCityMunicipality, EmContactProvince, EmContactRegion, EmContactCountry, EmContactZipcode } = employeeData;
-      const completeAddress = `${EmContactBarangay}, ${EmContactCityMunicipality}, ${EmContactProvince }, ${EmContactRegion}, ${EmContactCountry}, ${EmContactZipcode}`;
+      const { EmContactLandMark, EmContactBarangay, EmContactCityMunicipality, EmContactProvince, EmContactRegion, EmContactCountry, EmContactZipcode } = employeeData;
+      const completeAddress = `${EmContactLandMark}, ${EmContactBarangay}, ${EmContactCityMunicipality}, ${EmContactProvince }, ${EmContactRegion}, ${EmContactCountry}, ${EmContactZipcode}`;
       setEmployeeData({ ...employeeData, EmContactCompleteAddress: completeAddress });
     };
 
@@ -3511,155 +3501,83 @@ const toSentenceCase = (text) => {
                       <br/>
                       </div>
                       <div className="tab-pane fade" id="address" role="tabpanel" aria-labelledby="address-tab">
-                          {/* Address Form */}
-                          <div className="container">
-                            <h5 className="text-primary">Contact Details</h5>
-                            <hr className="hr-cobalt-blue" />
-                            <br />
-                            <div className="row">
-                              <form onSubmit={handleFormSubmit}>
-                                <div className="form-group">
-                                  <label>Update Contact Number</label>
-                                  <div className="d-flex align-items-center">
-                                    <input
-                                      type="tel"
-                                      className={`form-control ${contactError && 'is-invalid'}`}
-                                      value={employeeData.ContactNumber}
-                                      placeholder="update contact number"
-                                      name="ContactNumber"
-                                      onChange={handleInputChange}
-                                    />
-                                    {contactError && <div className="invalid-feedback">{contactError}</div>}
-                                    <button type="submit" className="btn btn-primary">
-                                      <i className="fas fa-pencil-alt"></i>
-                                    </button>
-                                  </div>
-                                </div>
-                              </form>
-                              {employeeData.SecondaryContactNum && employeeData.SecondaryContactNum !== 'N/A' && (
-                                <div className="col-md-4">
-                                  <div>
-                                    <label>Secondary Contact Number</label>
-                                    <span className="form-control">{employeeData.SecondaryContactNum}</span>
-                                  </div>
-                                </div>
-                              )}
-                              <div className="col-md-4">
-                                <form onSubmit={handleAddContactForm}>
-                                  <div className="form-group">
-                                    {employeeData.SecondaryContactNum ? (
-                                      <>
-                                        <label>Update Secondary Contact Number</label>
+                                    {/* Address Form */}
+                                    <div className="container">
+                                      <h5 className="text-primary">Contact Details</h5>
+                                      <hr className="hr-cobalt-blue" />
+                                      <br />
+                                      <div className="row">
+                                    <form onSubmit={handleFormSubmit}>
+                                      <div className="form-group">
+                                        <label>Update Contact Number</label>
                                         <div className="d-flex align-items-center">
                                           <input
                                             type="tel"
-                                            className={`form-control mr-2 ${secondarycontactError && 'is-invalid'}`}
-                                            value={employeeData.newContactNumber}
+                                            className={`form-control mr-2 ${contactError && 'is-invalid'}`}
+                                            value={employeeData.ContactNumber}
                                             placeholder="update contact number"
-                                            name="newContactNumber"
+                                            name="ContactNumber"
                                             onChange={handleInputChange}
                                           />
-                                          {secondarycontactError && <div className="invalid-feedback">{secondarycontactError}</div>}
+                                          {contactError && <div className="invalid-feedback">{contactError}</div>}
                                           <button type="submit" className="btn btn-primary">
                                             <i className="fas fa-pencil-alt"></i>
                                           </button>
                                         </div>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <label>Add New Contact Number</label>
-                                        <div className="d-flex align-items-center">
-                                          <input
-                                            type="tel"
-                                            className={`form-control mr-2 ${newcontactError && 'is-invalid'}`}
-                                            value={employeeData.newContactNumber}
-                                            placeholder="add new contact number"
-                                            name="newContactNumber"
-                                            onChange={handleInputChange}
-                                          />
-                                          {newcontactError && <div className="invalid-feedback">{newcontactError}</div>}
-                                          <button type="submit" className="btn btn-primary">
-                                            <i className="fas fa-plus"></i>
-                                          </button>
-                                        </div>
-                                      </>
-                                    )}
-                                  </div>
-                                </form>
-                              </div>
-                            </div>
-                        {/* <div className="container">
-                          <h5 className='text-primary'>Contact Details</h5>
-                                <hr className="hr-cobalt-blue"/>
-                                <br/>
-                              <div className="row">
-                                <form onSubmit={handleFormSubmit}>
-                                  <div className="form-group">
-                                    <label>Update Contact Number</label>
-                                    <div className="d-flex align-items-center">
-                                      <input 
-                                        type="tel" 
-                                        className="form-control mr-2" 
-                                        value={employeeData.ContactNumber} 
-                                        placeholder="update contact number" 
-                                        name="ContactNumber" 
-                                        onChange={handleInputChange} 
-                                      />
-                                      <button type="submit" className="btn btn-primary">
-                                      <i className="fas fa-pencil-alt"></i></button>
-                                    </div>
-                                  </div>
-                                </form>
-                                    {employeeData.SecondaryContactNum && employeeData.SecondaryContactNum !== "N/A" && (
-                                    <div className="col-md-4">
-                                      <div>
-                                        <label>Secondary Contact Number</label>
-                                        <span className='form-control'>{employeeData.SecondaryContactNum}</span>
-                                      </div>
-                                    </div>
-                                  )}
-                                   <div className="col-md-4">
-                                    <form onSubmit={handleAddContactForm}>
-                                      <div className="form-group">
-                                        {employeeData.SecondaryContactNum ? (
-                                          <>
-                                            <label>Update Secondary Contact Number</label>
-                                            <div className="d-flex align-items-center">
-                                              <input 
-                                                type="tel" 
-                                                className="form-control mr-2" 
-                                                value={employeeData.newContactNumber} 
-                                                placeholder="update contact number" 
-                                                name="newContactNumber" 
-                                                onChange={handleInputChange} 
-                                              />
-                                              <button type="submit" className="btn btn-primary" >
-                                              <i className="fas fa-pencil-alt"></i>
-                                              </button>
-                                            </div>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <label>Add New Contact Number</label>
-                                            <div className="d-flex align-items-center">
-                                              <input 
-                                                type="tel" 
-                                                className="form-control mr-2" 
-                                                value={employeeData.newContactNumber} 
-                                                placeholder="add new contact number" 
-                                                name="newContactNumber" 
-                                                onChange={handleInputChange} 
-                                              />
-                                              <button type="submit" className="btn btn-primary">
-                                              <i className="fas fa-plus"></i>
-                                              </button>
-                                            </div>
-                                          </>
-                                        )}
                                       </div>
                                     </form>
-                                  </div> 
-                                  </div>*/}
+                                    {employeeData.SecondaryContactNum && employeeData.SecondaryContactNum !== 'N/A' && (
+                                      <div className="col-md-4">
+                                        <div>
+                                          <label>Secondary Contact Number</label>
+                                          <span className="form-control">{employeeData.SecondaryContactNum}</span>
+                                        </div>
+                                      </div>
+                                    )}
+                                    <div className="col-md-4">
+                                      <form onSubmit={handleAddContactForm}>
+                                        <div className="form-group">
+                                          {employeeData.SecondaryContactNum ? (
+                                            <>
+                                              <label>Update Secondary Contact Number</label>
+                                              <div className="d-flex align-items-center">
+                                                <input
+                                                  type="tel"
+                                                  className={`form-control mr-2 ${newContactError && 'is-invalid'}`}
+                                                  value={employeeData.newContactNumber}
+                                                  placeholder="update contact number"
+                                                  name="newContactNumber"
+                                                  onChange={handleInputChange}
+                                                />
+                                                {newContactError && <div className="invalid-feedback">{newContactError}</div>}
+                                                <button type="submit" className="btn btn-primary">
+                                                  <i className="fas fa-pencil-alt"></i>
+                                                </button>
+                                              </div>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <label>Add New Contact Number</label>
+                                              <div className="d-flex align-items-center">
+                                                <input
+                                                  type="tel"
+                                                  className={`form-control mr-2 ${newContactError && 'is-invalid'}`}
+                                                  value={employeeData.newContactNumber}
+                                                  placeholder="add new contact number"
+                                                  name="newContactNumber"
+                                                  onChange={handleInputChange}
+                                                />
+                                                {newContactError && <div className="invalid-feedback">{newContactError}</div>}
+                                                <button type="submit" className="btn btn-primary">
+                                                  <i className="fas fa-plus"></i>
+                                                </button>
+                                              </div>
+                                            </>
+                                          )}
+                                        </div>
+                                      </form>
+                                    </div>
+                                  </div>
                                     <hr/>
                                       <form onSubmit={handleAddressFormSubmit}>
                                         <h5 className='text-primary'>Address Details</h5>
@@ -3769,12 +3687,6 @@ const toSentenceCase = (text) => {
                                               {addressErrors.ZipCode && <div className="text-danger">{addressErrors.ZipCode }</div>}
                                             </div>
                                           </div>
-                                          {/* <div className="col-md-4">
-                                            <div className="form-group">
-                                              <label htmlFor="zipcode">Zip Code</label>
-                                              <input type="text" className="form-control" placeholder="Enter Zip Code" name="ZipCode" value={employeeData.ZipCode} onChange={handleInputChange} />
-                                            </div>
-                                          </div> */}
                                         </div>
                                         <div className="row justify-content-center">
                                           <div className="col-md-4">
@@ -3829,7 +3741,6 @@ const toSentenceCase = (text) => {
                                             onChange={handleInputChange} 
                                         />
                                         {EMphoneError && <div className="invalid-feedback">{EMphoneError}</div>}
-                                          {/* <input type="text" className="form-control" value={employeeData.EmContactPhoneNumber} placeholder="Enter contact number" name="EmContactPhoneNumber" onChange={handleInputChange} /> */}
                                       </div>
                                   </div>
                                   <div className="col-md-4">
@@ -3840,16 +3751,17 @@ const toSentenceCase = (text) => {
                                     </div>
                                 </div>
                                 <div className="row">
-                                    <div className="col-md-8">
+                                    <div className="col-md-12">
                                         <div className="form-group">
                                             <label>Complete Address</label>
                                             <input type="text" className="form-control" value={employeeData.EmContactCompleteAddress} placeholder="Enter complete address" name="EmContactCompleteAddress" onChange={handleInputChange} />
                                         </div>
                                     </div>
-                                    <div className="col-md-4">
+                                </div>
+                                <div className="row justify-content-center">
+                                <div className="col-md-4">
                                         <div className="form-group">
                                             <label>Country</label>
-                                            {/* <input type="text" className="form-control" value={employeeData.EmContactCountry} placeholder="Enter Country" name="EmContactCountry" onChange={handleInputChange} /> */}
                                             <select
                                                 id="countryDropdown"
                                                 className="form-control"
@@ -3863,13 +3775,10 @@ const toSentenceCase = (text) => {
                                               </select>
                                         </div>
                                     </div>
-                                </div>
-                                <div className="row justify-content-center">
                                     <div className="col-md-4">
                                         <div className="form-group">
                                             <label>Region</label>
-                                            {/* <input type="text" className="form-control" value={employeeData.EmContactRegion} placeholder="Enter Region" name="EmContactRegion" onChange={handleInputChange} /> */}
-                                            <select
+                                             <select
                                                 id="regionDropdown"
                                                 className="form-control"
                                                 value={employeeData.EmContactRegion || ""}
@@ -3886,7 +3795,6 @@ const toSentenceCase = (text) => {
                                     <div className="col-md-4">
                                         <div className="form-group">
                                             <label>Province</label>
-                                            {/* <input type="text" className="form-control" value={employeeData.EmContactProvince} placeholder="Enter province" name="EmContactProvince" onChange={handleInputChange} /> */}
                                             <select
                                                 id="provinceDropdown"
                                                 className="form-control"
@@ -3901,26 +3809,25 @@ const toSentenceCase = (text) => {
                                               {ECaddressErrors.EmContactProvince && <div className="text-danger">{ECaddressErrors.EmContactProvince}</div>}
                                        </div>
                                     </div>
-                                    <div className="col-md-4">
-                                        <div className="form-group">
-                                            <label>City / Municipality</label>
-                                            {/* <input type="text" className="form-control" value={employeeData.EmContactCityMunicipality} placeholder="Enter city/municipality" name="EmContactCityMunicipality" onChange={handleInputChange} /> */}
-                                            <select
-                                                id="cityDropdown"
+                                </div>
+                                  <div className="row justify-content-center">
+                                  <div className="col-md-4">
+                                    <div className="form-group">
+                                              <label htmlFor="ECcityMunicipality">City / Municipality</label>
+                                              <select
+                                                id="municipalityDropdown"
                                                 className="form-control"
                                                 value={employeeData.EmContactCityMunicipality || ""}
                                                 name="EmContactCityMunicipality"
                                                 onChange={handleECCityChange}
                                               >
-                                                {ECcitiesWithExisting.map(city => (
-                                                  <option key={city} value={city}>{city}</option>
+                                                {ECcitiesWithExisting.map(municipality => (
+                                                  <option key={municipality} value={municipality}>{municipality}</option>
                                                 ))}
                                               </select>
                                               {ECaddressErrors.EmContactCityMunicipality && <div className="text-danger">{ECaddressErrors.EmContactCityMunicipality}</div>}
-                                        </div>
+                                            </div>
                                     </div>
-                                </div>
-                                  <div className="row justify-content-center">
                                     <div className="col-md-4">
                                         <div className="form-group">
                                             <label>Barangay</label>
@@ -3935,14 +3842,14 @@ const toSentenceCase = (text) => {
                                             {ECaddressErrors.EmContactZipcode && <div className="text-danger">{ECaddressErrors.EmContactZipcode}</div>}
                                         </div>
                                     </div>
-                                    <div className="col-md-4">
+                                  </div>
+                                  <div className="row">
+                                  <div className="col-md-4">
                                         <div className="form-group">
                                             <label>Land Mark</label>
                                             <input type="text" className="form-control" value={employeeData.EmContactLandMark} placeholder="Enter landmark" name="EmContactLandMark" onChange={handleInputChange} />
                                         </div>
                                     </div>
-                                  </div>
-                                  <div className="row">
                                     <div className="col-md-4">
                                         <div className="form-group">
                                             <label>Is Permanent</label>
@@ -4073,8 +3980,6 @@ const toSentenceCase = (text) => {
                       </div>
                       <div className="tab-pane fade" id="dependent" role="tabpanel" aria-labelledby="dependent-tab">
                         {/* Dependent Form */}
-                           {/* <div className="container">  */}
-                           {/* <div className="card"> */}
                                 <div className="card-body d-flex justify-content-between align-items-center">
                                   {/* New Record button */}
                                   <button className="btn btn-xs btn-primary mr-2" onClick={handleShowAddDependentModal}>
@@ -4254,7 +4159,6 @@ const toSentenceCase = (text) => {
                                                               <div className="form-group">
                                                                   <label >Full Name</label>
                                                                   <input type="text" className="form-control" placeholder="enter dependent full name" value={selectedDependent?.FullName || ''} onChange={(e) => setSelectedDependent({ ...selectedDependent, FullName: e.target.value })} />
-                                                                  {/* <input type="text" className="form-control" value={employeeData.FullName} placeholder="enter dependent full name" name="FullName" onChange={handleInputChange} /> */}
                                                               </div>
                                                           </div>
                                                           <div className="col-md-4">
@@ -4418,11 +4322,8 @@ const toSentenceCase = (text) => {
                             <tr key={index}>
                               <td>
                               <button className="btn btn-xs btn-primary mr-2" onClick={() => handleShowEditModal(dependent)}>
-                                              <i className="fas fa-pencil-alt"></i>
-                                            </button>
-                                {/* <button className="btn btn-xs btn-primary mr-2" onClick={handleShowEditModal}>
-                                  <i className="fas fa-pencil-alt"></i>Edit
-                                </button> */}
+                                      <i className="fas fa-pencil-alt"></i>
+                              </button>
                                 </td>
                               <td>{dependent.FullName}</td>
                               <td>{dependent.PhoneNum}</td>
@@ -4451,12 +4352,10 @@ const toSentenceCase = (text) => {
                           </tr>
                         )}
                       </tbody>
-                                    </table>
-                                  </div>
-                           </div>
-                        {/* </div> */}
-                        {/* </div>  */}
-                      <br/>
+                     </table>
+                    </div>
+                  </div>
+                <br/>
                       </div>
                       <div className="tab-pane fade" id="compBen" role="tabpanel" aria-labelledby="compBen-tab">
                                 <div className="card-body d-flex justify-content-between align-items-center">
@@ -4464,24 +4363,6 @@ const toSentenceCase = (text) => {
                                   <button className="btn btn-xs btn-primary mr-2" onClick={handleShowAddCompBenModal}>
                                     <i className="fas fa-plus"></i> New Record
                                   </button>
-
-                                  {/* Search form */}
-                                  {/* <form className="form-inline ml-auto">
-                                    <div className="input-group">
-                                      <input
-                                        type="text"
-                                        className="form-control bg-light border-0 small"
-                                        placeholder="Search by Name"
-                                        value={searchQuery}
-                                        onChange={handleSearchChange}
-                                      />
-                                      <div className="input-group-append">
-                                        <button className="btn btn-primary" type="button">
-                                          <i className="fas fa-search fa-sm"></i>
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </form> */}
                                 </div>
                               {/* Add CompBen Modal */}
                               <Modal show={showAddCompBenModal} onHide={handleCloseAddModal} dialogClassName="custom-modal">
@@ -4747,7 +4628,6 @@ const toSentenceCase = (text) => {
                                           </div>
                                           <br/>
                                         </form>
-
                                   </Modal.Body>
                                   <Modal.Footer>
                                       <Button variant="secondary" onClick={handleCloseAddModal}>
@@ -5366,10 +5246,7 @@ const toSentenceCase = (text) => {
                               <td>
                               <button className="btn btn-xs btn-primary mr-2" onClick={() => handleShowEditCompBenModal(compBen)}>
                                               <i className="fas fa-pencil-alt"></i>
-                                            </button>
-                                {/* <button className="btn btn-xs btn-primary mr-2" onClick={handleShowEditModal}>
-                                  <i className="fas fa-pencil-alt"></i>Edit
-                                </button> */}
+                              </button>
                                 </td>
                                 <td>₱{compBen.Salary}</td>  
                                 <td>₱{compBen.DailyEquivalent}</td> 
@@ -5416,8 +5293,6 @@ const toSentenceCase = (text) => {
                                     </table>
                                   </div>
                            </div>
-                        {/* </div> */}
-                        {/* </div>  */}
                       <br/>
                       </div>
                       <div className='tab-pane fade' id='history' role='tabpanel' aria-labelledby='history-tab'>
@@ -5462,15 +5337,14 @@ const toSentenceCase = (text) => {
                         </div>
                       </div>
                   </div>
-              </div>
-              </div>
-              </div>
-              </div>
-              </div>
-              <Footer />
+            </div>
           </div>
+        </div>
       </div>
-      
+     </div>
+    <Footer />
+  </div>
+ </div>
   );
 }
 
