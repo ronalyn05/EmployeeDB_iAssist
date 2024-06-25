@@ -1688,6 +1688,11 @@ const toSentenceCase = (text) => {
     .map(word => word.charAt(0).toUpperCase() + word.slice(1)) // Capitalize the first letter of each word
     .join(' '); // Join the words back together
 };
+// Function to check if a value is a valid date
+function isValidDate(dateString) {
+  const d = new Date(dateString);
+  return !isNaN(d);
+}
 
   if (!employeeData) {
     return <div>Loading...</div>;
@@ -4097,6 +4102,11 @@ const toSentenceCase = (text) => {
 
                                   {/* Search form */}
                                   <form className="form-inline ml-auto">
+                                  <div className="input-group-append">
+                                        <button className="btn btn-primary" type="button">
+                                          <i className="fas fa-search fa-sm"></i>
+                                        </button>
+                                      </div>
                                     <div className="input-group">
                                       <input
                                         type="text"
@@ -4105,11 +4115,6 @@ const toSentenceCase = (text) => {
                                         value={searchQuery}
                                         onChange={handleSearchChange}
                                       />
-                                      <div className="input-group-append">
-                                        <button className="btn btn-primary" type="button">
-                                          <i className="fas fa-search fa-sm"></i>
-                                        </button>
-                                      </div>
                                     </div>
                                   </form>
                                 </div>
@@ -4287,7 +4292,17 @@ const toSentenceCase = (text) => {
                                                           <div className="col-md-4">
                                                               <div className="form-group">
                                                                   <label>Date of Birth</label>
-                                                                  <input type="text" className="form-control" placeholder="enter date of birth" value={selectedDependent?.DateOfBirth || ''} onChange={(e) => setSelectedDependent({ ...selectedDependent, DateOfBirth: e.target.value })} />
+                                                                  <input
+                                                                    type="date"
+                                                                    className="form-control"
+                                                                    value={selectedDependent && selectedDependent.DateOfBirth && isValidDate(selectedDependent.DateOfBirth) ? new Date(selectedDependent.DateOfBirth).toISOString().substr(0, 10) : ''}
+                                                                    placeholder="Date Of Birth"
+                                                                    onChange={(e) => {
+                                                                      const newValue = e.target.value !== '' ? e.target.value : null;
+                                                                      setSelectedDependent({ ...selectedDependent, DateOfBirth: newValue });
+                                                                    }}
+                                                                  />
+                                                                  {/* <input type="date" className="form-control" placeholder="enter date of birth" value={selectedDependent?.DateOfBirth || ''} onChange={(e) => setSelectedDependent({ ...selectedDependent, DateOfBirth: e.target.value })} /> */}
                                                               </div>
                                                           </div>
                                                           <div className="col-md-4">
@@ -4333,7 +4348,17 @@ const toSentenceCase = (text) => {
                                                           <div className="col-md-4">
                                                                     <div className="form-group">
                                                                     <label >Beneficiary Date</label>
-                                                                    <input type="text" className="form-control" placeholder="Enter Beneficiary Date" value={selectedDependent?.BeneficiaryDate || ''} onChange={(e) => setSelectedDependent({ ...selectedDependent, BeneficiaryDate: e.target.value })} />
+                                                                   <input
+                                                                    type="date"
+                                                                    className="form-control"
+                                                                    value={selectedDependent && selectedDependent.BeneficiaryDate && isValidDate(selectedDependent.BeneficiaryDate) ? new Date(selectedDependent.BeneficiaryDate).toISOString().substr(0, 10) : ''}
+                                                                    placeholder="Beneficiary Date"
+                                                                    onChange={(e) => {
+                                                                      const newValue = e.target.value !== '' ? e.target.value : null;
+                                                                      setSelectedDependent({ ...selectedDependent, BeneficiaryDate: newValue });
+                                                                    }}
+                                                                  />
+                                                                    {/* <input type="date" className="form-control" placeholder="Enter Beneficiary Date" value={selectedDependent?.BeneficiaryDate || ''} onChange={(e) => setSelectedDependent({ ...selectedDependent, BeneficiaryDate: e.target.value })} /> */}
                                                                     </div>
                                                                   </div>
                                                           <div className="col-md-4">
@@ -4353,7 +4378,17 @@ const toSentenceCase = (text) => {
                                                           <div className="col-md-4">
                                                               <div className="form-group">
                                                                   <label >Insurance Date</label>
-                                                                  <input type="text" className="form-control" placeholder="Enter Insurance Date" value={selectedDependent?.InsuranceDate || ''} onChange={(e) => setSelectedDependent({ ...selectedDependent, InsuranceDate: e.target.value })} />
+                                                                  <input
+                                                                    type="date"
+                                                                    className="form-control"
+                                                                    value={selectedDependent && selectedDependent.InsuranceDate && isValidDate(selectedDependent.InsuranceDate) ? new Date(selectedDependent.BeneficiaryDate).toISOString().substr(0, 10) : ''}
+                                                                    placeholder="Beneficiary Date"
+                                                                    onChange={(e) => {
+                                                                      const newValue = e.target.value !== '' ? e.target.value : null;
+                                                                      setSelectedDependent({ ...selectedDependent, InsuranceDate: newValue });
+                                                                    }}
+                                                                  />
+                                                                  {/* <input type="text" className="form-control" placeholder="Enter Insurance Date" value={selectedDependent?.InsuranceDate || ''} onChange={(e) => setSelectedDependent({ ...selectedDependent, InsuranceDate: e.target.value })} /> */}
                                                               </div>
                                                           </div>
                                                           <div className="col-md-4">

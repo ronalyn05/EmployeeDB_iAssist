@@ -97,7 +97,7 @@ import { useState } from "react";
              {/* <hr className="sidebar-divider" /> */}
              {/* Heading */}
              <div className="sidebar-heading">
-                 MAIN
+                 iAssist 2.0
              </div>
              
              <li className="nav-item">
