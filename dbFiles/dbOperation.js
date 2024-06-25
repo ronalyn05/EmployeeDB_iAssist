@@ -523,6 +523,7 @@ const getAllEmployees = async () => {
     let result = await pool.request().query(`
     SELECT 
     PD.EmployeeId,
+    UA.Role,
     PD.FirstName,
     PD.LastName,
     PD.Birthdate,
@@ -559,6 +560,7 @@ INNER JOIN EmployeeInfo AS EI ON PD.EmployeeId = EI.EmployeeId
 INNER JOIN Address AS ADDRESS ON PD.EmployeeId = ADDRESS.EmployeeId
 INNER JOIN Contact AS CONTACT ON PD.EmployeeId = CONTACT.EmployeeId
 INNER JOIN Education AS EDUC ON PD.EmployeeId = EDUC.EmployeeId
+INNER JOIN UserAccount AS UA ON PD.EmployeeId = UA.EmployeeId
 LEFT JOIN EmergencyContactNumber AS EC ON PD.EmployeeId = EC.EmployeeId
 LEFT JOIN DeliveryUnit AS DU ON PD.EmployeeId = DU.EmployeeId
 LEFT JOIN Department AS DEPT ON PD.EmployeeId = DEPT.EmployeeId
@@ -1028,12 +1030,13 @@ const addToHistory = async (historyData) => {
           .input('FieldName', sql.VarChar(100), historyData.FieldName)
           .input('OldValue', sql.VarChar(100), historyData.OldValue)
           .input('NewValue', sql.VarChar(100), historyData.NewValue)
+          .input('Remarks', sql.VarChar(1000), historyData.Remarks)
           .input('DateCreated', sql.DateTime, historyData.DateCreated)
           .input('UpdatedBy', sql.VarChar(100), historyData.UpdatedBy)
           .input('EmployeeId', sql.VarChar(100), historyData.EmployeeId)
           .query(`
-              INSERT INTO History (EmployeeName, Action, FieldName, OldValue, NewValue, DateCreated, UpdatedBy, EmployeeId)
-              VALUES (@EmployeeName, @Action, @FieldName, @OldValue, @NewValue, @DateCreated, @UpdatedBy, @EmployeeId)
+              INSERT INTO History (EmployeeName, Action, FieldName, OldValue, NewValue, Remarks, DateCreated, UpdatedBy, EmployeeId)
+              VALUES (@EmployeeName, @Action, @FieldName, @OldValue, @NewValue, @Remarks, @DateCreated, @UpdatedBy, @EmployeeId)
           `);
 
       return result;

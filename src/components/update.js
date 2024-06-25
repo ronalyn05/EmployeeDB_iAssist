@@ -45,7 +45,8 @@ import 'jspdf-autotable';
     Is_Emergency: false,
     Is_Permanent: false,
     ProfilePhoto: "/img/user.png",
-    HRANType: ''
+    HRANType: '',
+    Remarks: ''
   });
   // Define initialOptions first
   const initialOptions = [
@@ -108,7 +109,6 @@ import 'jspdf-autotable';
   const [filteredCompBen, setFilteredCompBen] = useState([]);
   const [filteredHistory, setFilteredHistory] = useState([]);
   const [errors, setErrors] = useState({});
-  // const [compBen, setCompBen] = useState([]); 
   const [selectedCompBen, setSelectedCompBen] = useState(null);
   const [countries, setCountries] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -454,18 +454,37 @@ const handleInputChange = (e) => {
         setOtherHRANType('');
     }
   };
-
+  //handles that validate remarks
+  const validateRemarks = () => {
+    if (initialOptions.includes(employeeData.HRANType) && employeeData.HRANType !== 'Others' && !employeeData.Remarks) {
+      alert('Please enter remarks for the selected HRAN Type.');
+      return false;
+    }
+    return true;
+  };
+  
   //function to handle the additional input for hran type
   const handleOtherInputChange = (event) => {
     setOtherHRANType(event.target.value);
 };
+  
 //function that handles in adding other hran type details
+// const addOtherHRANType = () => {
+//     if (otherHRANType && !options.includes(otherHRANType)) {
+//         setOptions([...options, otherHRANType]);
+//         setEmployeeData({ ...employeeData, HRANType: otherHRANType });
+//         setOtherHRANType('');
+//     }
+// };
 const addOtherHRANType = () => {
-    if (otherHRANType && !options.includes(otherHRANType)) {
-        setOptions([...options, otherHRANType]);
-        setEmployeeData({ ...employeeData, HRANType: otherHRANType });
-        setOtherHRANType('');
-    }
+  if (otherHRANType.trim() && !options.includes(otherHRANType)) {
+    setOptions([...options, otherHRANType]);
+    setEmployeeData({
+      ...employeeData,
+      HRANType: otherHRANType
+    });
+    setOtherHRANType('');
+  }
 };
 
 // Handle form submission for adding new contact
@@ -541,8 +560,11 @@ const handleAddContactForm = async (e) => {
       // Display the success message
       alert(successMessage);
 
-       // Reload the page after showing the alert
-      //  window.location.reload();
+      // Refresh employee data after successful addition
+      fetchEmployeeData();
+
+      // Reload the page after showing the alert
+      window.location.reload();
   
       } catch (error) {
         console.error('Error updating employee personal details:', error);
@@ -560,7 +582,10 @@ const handleFormEmpInfoSubmit = async (e) => {
     alert('Please choose an HRANType before updating the employee information.');
     return;
   }
-
+   // Validate Remarks before submission
+   if (!validateRemarks()) {
+    return;
+  }
   try {
     // Fetch the current employee data
     const currentDataResponse = await fetch(`http://localhost:5000/getEmployeeInfo/${employeeId}`);
@@ -600,7 +625,7 @@ const handleFormEmpInfoSubmit = async (e) => {
 
     // Filter out fields that contain EmployeeName, FirstName, MiddleName, LastName
     const filteredFields = updatedFields.filter(
-      (field) => !['EmployeeName', 'FirstName', 'MiddleName', 'LastName'].includes(field)
+      (field) => !['EmployeeName', 'FirstName', 'MiddleName', 'LastName', 'EmContactCompleteAddress'].includes(field)
     );
 
     // Generate success message based on updated fields
@@ -619,6 +644,13 @@ const handleFormEmpInfoSubmit = async (e) => {
 
     // Insert into History table for each updated field
     for (const field of filteredFields) {
+
+      const newValue = employeeData[field];
+      if (newValue === undefined || newValue === null) {
+        console.error(`Invalid value for field ${field}: ${newValue}`);
+        continue;
+      }
+
       const historyData = {
         EmployeeName: employeeName,
         Action: 'Update',
@@ -628,6 +660,7 @@ const handleFormEmpInfoSubmit = async (e) => {
         DateCreated: new Date().toISOString(),
         UpdatedBy: updatedBy,
         EmployeeId: employeeId,
+        Remarks: employeeData.Remarks,
       };
 
       const historyResponse = await fetch('http://localhost:5000/addToHistory', {
@@ -646,8 +679,12 @@ const handleFormEmpInfoSubmit = async (e) => {
     // Display the success message
     alert(successMessage);
 
-    // Reload the page after showing the alert
-    window.location.reload();
+        // Refresh employee data after successful addition
+        fetchEmployeeData();
+
+     // Reload the page after showing the alert
+     window.location.reload();
+
   } catch (error) {
     console.error('Error updating employee information:', error);
     // Send alert message for failure
@@ -703,9 +740,12 @@ const handleFormEmpInfoSubmit = async (e) => {
           alert(successMessage);
     
           // Reload the page after showing the alert
-          window.location.reload();
+          // window.location.reload();
           // Navigate to report.js
           // navigate("/reports");
+
+        // Refresh employee data after successful addition
+        fetchEmployeeData();
     
         } catch (error) {
           console.error('Error updating employee address:', error);
@@ -805,7 +845,10 @@ const handleFormEmpInfoSubmit = async (e) => {
         alert(successMessage);
       
          // Reload the page after showing the alert
-        window.location.reload();
+        // window.location.reload();
+
+        // Refresh employee data after successful addition
+        fetchEmployeeData();
 
         } catch (error) {
           console.error('Error updating employee:', error);
@@ -987,6 +1030,9 @@ const handleFormEmpInfoSubmit = async (e) => {
       handleCloseEditModal(); // Close modal after successful update
       fetchDependents(); // Refresh dependents data after update
 
+      // Refresh employee data after successful addition
+     fetchEmployeeData();
+
     } catch (error) {
       console.error('Error updating dependent details:', error);
       alert('Failed to update dependent details. Please try again later.');
@@ -1126,7 +1172,11 @@ const handleFormEmpInfoSubmit = async (e) => {
       alert(successMessage);
   
       // Reload the page after showing the alert
-      window.location.reload();
+      // window.location.reload();
+
+      // Refresh employee data after successful addition
+     fetchEmployeeData();
+
     } catch (error) {
       console.error('Error updating employee emergency contact:', error);
       // Send alert message for failure
@@ -1856,7 +1906,6 @@ const toSentenceCase = (text) => {
                                     <div className="col-md-4">
                                         <div className="form-group">
                                             <label htmlFor="dateHired">Date Hired</label>
-                                            {/* <input type="text" className="form-control" value={employeeData.DateHired} placeholder="Date Hired" name="DateHired" onChange={handleInputChange} /> */}
                                             <input
                                               type="date"
                                               className="form-control"
@@ -1879,7 +1928,6 @@ const toSentenceCase = (text) => {
                                                       style={{ color: statusColor }} 
                                                       className='form-control'
                                                     >
-                                                    {/* <select value={employeeData.EmployeeStatus} name="EmployeeStatus" onChange={handleInputChange}> */}
                                                         <option value="Active">Active</option>
                                                         <option value="Separated">Separated</option>
                                                         <option value="Inactive - Maternity">Inactive - Maternity</option>
@@ -1910,7 +1958,6 @@ const toSentenceCase = (text) => {
                                                         <option value="Associate">Associate</option>
                                                         <option value="Management">Management</option>
                                                     </select>
-                                              {/* <input type="text" className="form-control" value={employeeData.EmployeeCategory} placeholder="enter work Week Type" name="EmployeeCategory" onChange={handleInputChange} /> */}
                                               </div>
                                             </div>
                                 </div>
@@ -2072,7 +2119,6 @@ const toSentenceCase = (text) => {
                                                         <option value="HRAdmin">HRAdmin</option>
                                                         <option value="Employee">Employee</option>
                                                     </select>
-                                              {/* <input type="text" className="form-control" value={employeeData.EmployeeCategory} placeholder="enter work Week Type" name="EmployeeCategory" onChange={handleInputChange} /> */}
                                               </div>
                                             </div>
                                 </div>
@@ -2170,9 +2216,7 @@ const toSentenceCase = (text) => {
                                             <div className="col-md-4">
                                               <div className="form-group">
                                               <label htmlFor="shiftname">Shift Name</label>
-                                              {/* <input type="text" className="form-control" value={employeeData.ShiftName} name="ShiftName" />     */}
                                               <select className="form-control" value={employeeData.ShiftName} name="ShiftName" onChange={handleInputChange}>
-                                              {/* <select className="form-control" value={`${employeeData.ShiftName}`} name="ShiftName" onChange={handleShiftChange}> */}
                                                 <option value=" FIXED - 6 Day 6:00AM to 2:00PM">FIXED - 6 Day 6:00AM to 2:00PM</option>
                                                 <option value=" FIXED - 5 Day 8:00PM to 5:12AM"> FIXED - 5 Day 8:00PM to 5:12AM</option>
                                                 <option value=" FIXED - 6 Day 10:00PM to 6:00AM"> FIXED - 6 Day 10:00PM to 6:00AM</option>
@@ -2257,7 +2301,6 @@ const toSentenceCase = (text) => {
                                             <div className="col-md-4">
                                               <div className="form-group">
                                               <label htmlFor="shifttype">Shift Type</label>
-                                              {/* <input type="text" className="form-control" value={employeeData.ShiftType} name="ShiftType" />   */}
                                               <select className="form-control" value={employeeData.ShiftType} name="ShiftType" onChange={handleInputChange}>
                                                         <option value="1st">1st</option>
                                                         <option value="2nd">2nd</option>
@@ -2271,7 +2314,6 @@ const toSentenceCase = (text) => {
                                             <div className="col-md-6">
                                               <div className="form-group">
                                               <label htmlFor="workWeekType"> Work week type</label>
-                                              {/* <input type="text" className="form-control" value={employeeData.WorkWeekType} placeholder="enter work Week Type" name="WorkWeekType" onChange={handleInputChange} /> */}
                                               <select className="form-control" value={employeeData.WorkWeekType} name="WorkWeekType" onChange={handleInputChange}>
                                                         <option value="Non-Compressed Work Week">Non-Compressed Work Week</option>
                                                         <option value="Compressed Work Week (Philippines Facilities)">Compressed Work Week (Philippines Facilities)</option>
@@ -2281,7 +2323,11 @@ const toSentenceCase = (text) => {
                                             <div className="col-md-6">
                                               <div className="form-group">
                                               <label htmlFor="workArrangement">Work Arrangement</label>
-                                              <input type="text" className="form-control" value={employeeData.WorkArrangement} placeholder="enter work arrangement" name="WorkArrangement" onChange={handleInputChange} />
+                                              <select className="form-control" value={employeeData.WorkArrangement} name="WorkArrangement" onChange={handleInputChange}>
+                                                        <option value="WOS">Work On Site</option>
+                                                        <option value="WFH">Work From Home</option>
+                                                        <option value="Hybrid">Hybrid</option>
+                                                    </select>
                                               </div>
                                             </div>
                                             
@@ -2294,7 +2340,8 @@ const toSentenceCase = (text) => {
                                 <div className="col-md-4">
                                               <div className="form-group">
                                               <label htmlFor="managerId">Manager Id</label>
-                                              <input type="text" className="form-control" value={employeeData.ManagerID} placeholder="enter manager Id" name="ManagerId" onChange={handleInputChange} />     
+                                              <input type="text" className="form-control" value={employeeData.ManagerID} placeholder="enter manager Id" name="ManagerID" onChange={handleInputChange} />   
+                                              {/* <span className="form-control">{employeeData.ManagerID}</span> */}
                                               </div>
                                             </div>
                                             <div className="col-md-4">
@@ -2306,7 +2353,7 @@ const toSentenceCase = (text) => {
                                             <div className="col-md-4">
                                               <div className="form-group">
                                               <label htmlFor="pmpicid">PM/PIC ID</label>
-                                              <input type="text" className="form-control" value={employeeData.PMPICID} placeholder="enter pmpicid" name="Pmpicid" onChange={handleInputChange} />
+                                              <input type="text" className="form-control" value={employeeData.PMPICID} placeholder="enter pmpicid" name="PMPICID" onChange={handleInputChange} />
                                               </div>
                                             </div>
                                 </div>
@@ -2320,7 +2367,8 @@ const toSentenceCase = (text) => {
                                             <div className="col-md-4">
                                               <div className="form-group">
                                               <label htmlFor="duhid">Delivery Unit Head ID</label>
-                                              <input type="text" className="form-control" value={employeeData.DUHID} placeholder="enter duhid" name="Duhid" onChange={handleInputChange} />
+                                              {/* <input type="text" className="form-control" value={employeeData.DUHID} placeholder="enter duhid" name="DUHID" onChange={handleInputChange} /> */}
+                                              <span className="form-control">{employeeData.DUHID}</span>
                                               </div>
                                             </div>
                                             <div className="col-md-4">
@@ -3415,7 +3463,68 @@ const toSentenceCase = (text) => {
                                   {/* <h5 className='text-primary'>Section 4</h5> */}
                                   {/* <hr className="hr-cobalt-blue"/> */}
                                 <br/>
-                                  <div className="row justify-content-center">
+                                <div className="row justify-content-center">
+                                  <div className="col-md-4">
+                                    <div className="form-group">
+                                      <label htmlFor="HRANType">HRAN Type</label>
+                                      <select
+                                        className="form-control"
+                                        value={employeeData.HRANType}
+                                        name="HRANType"
+                                        onChange={handleInputChange}
+                                      >
+                                        {options.map((option, index) => (
+                                          <option key={index} value={option}>
+                                            {option}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <br />
+                                      {employeeData.HRANType === 'Others' && (
+                                        <div className="d-flex align-items-center">
+                                          <input
+                                            type="text"
+                                            className="form-control mr-2"
+                                            placeholder="Please specify"
+                                            value={otherHRANType}
+                                            onChange={handleOtherInputChange}
+                                          />
+                                          <button type="button" className="btn btn-primary" onClick={addOtherHRANType}>Add</button>
+                                        </div>
+                                      )}
+                                      {employeeData.HRANType !== 'Others' && employeeData.HRANType && (
+                                        <div className="form-group mt-3">
+                                          <label htmlFor="Remarks">Remarks</label>
+                                          <textarea
+                                            className="form-control"
+                                            name="Remarks"
+                                            value={employeeData.Remarks}
+                                            onChange={handleInputChange}
+                                          />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="col-md-4">
+                                    <div className="form-group">
+                                      <label htmlFor="isManager">Is Manager</label>
+                                      <select className="form-control" value={employeeData.IsManager} name="IsManager" onChange={handleInputChange}>
+                                        <option value={true}>Yes</option>
+                                        <option value={false}>No</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                  <div className="col-md-4">
+                                    <div className="form-group">
+                                      <label htmlFor="isPmpic">Is PMPIC</label>
+                                      <select className="form-control" value={employeeData.IsPMPIC} name="IsPMPIC" onChange={handleInputChange}>
+                                        <option value={true}>Yes</option>
+                                        <option value={false}>No</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                </div>
+                                  {/* <div className="row justify-content-center">
                                               <div className="col-md-4">
                                                 <div className="form-group">
                                                 <label htmlFor="HRANType">HRAN Type</label>
@@ -3464,7 +3573,7 @@ const toSentenceCase = (text) => {
                                                     </select>
                                               </div>
                                             </div>
-                                </div>
+                                </div> */}
                                 <div className="row justify-content-center">
                                             <div className="col-md-4">
                                               <div className="form-group">
@@ -5308,6 +5417,7 @@ const toSentenceCase = (text) => {
                                   <th scope="col">Action</th>
                                   <th scope="col">Old</th>
                                   <th scope="col">New</th>
+                                  <th scope="col">Remark</th>
                                   <th scope="col">Date Created</th>
                                   <th scope="col">Updated By</th>
                                 </tr>
@@ -5322,6 +5432,7 @@ const toSentenceCase = (text) => {
                                     <td>{toSentenceCase(history.Action)}</td>
                                     <td>{history.OldValue}</td>
                                     <td>{history.NewValue}</td>
+                                    <td>{toSentenceCase(history.Remarks)}</td>
                                     <td>{history.DateCreated}</td>
                                     <td>{toSentenceCase(history.UpdatedBy)}</td>
                                     </tr>
