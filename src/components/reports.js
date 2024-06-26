@@ -54,7 +54,9 @@ const Reports = () => {
   const filterEmployees = (query) => {
     const filtered = employees.filter(
       (employee) =>
-        String(employee.EmployeeId).toLowerCase().includes(query.toLowerCase()) ||
+        String(employee.EmployeeId)
+          .toLowerCase()
+          .includes(query.toLowerCase()) ||
         employee.EmployeeName.toLowerCase().includes(query.toLowerCase())
     );
     setFilteredEmployees(filtered);
@@ -116,7 +118,7 @@ const Reports = () => {
         return "";
     }
   };
-//this only download data that are visible in the user interface table
+  //this only download data that are visible in the user interface table
   // const handleDownloadExcel = () => {
   //   const ws = XLSX.utils.json_to_sheet(filteredEmployees);
   //   const wb = XLSX.utils.book_new();
@@ -125,76 +127,117 @@ const Reports = () => {
   //   XLSX.writeFile(wb, "Employees_Report.xlsx");
   // };
 
-// Helper function to convert text to title case
-const toTitleCase = (text) => {
-  return text.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
-};
-//this downloads all the employee data in multiple tables 
-// Function to handle Excel download
-const handleDownloadExcel = async () => {
-  try {
-    // Fetch data from the backend
-    const response = await axios.get('/api/getAllEmployees');
+  // Helper function to convert text to title case
+  const toTitleCase = (text) => {
+    return text
+      .toLowerCase()
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+  //this downloads all the employee data in multiple tables
+  // Function to handle Excel download
+  const handleDownloadExcel = async () => {
+    try {
+      // Fetch data from the backend
+      const response = await axios.get("/api/getAllEmployees");
 
-    if (response.status !== 200) {
-      throw new Error("Failed to fetch data");
-    }
+      if (response.status !== 200) {
+        throw new Error("Failed to fetch data");
+      }
 
-    const data = response.data;
+      const data = response.data;
 
-    // Log the response data to inspect
-    console.log("Data from backend:", data);
+      // Log the response data to inspect
+      console.log("Data from backend:", data);
 
-    // Specify fields to exclude
-    const excludedFields = [
-      'EmpInfoID', 'ProjectId', 'DepartmentId', 'ProdId', 'ShiftId',
-      'EducationID', 'AddressID', 'ContactId', 'ShiftID', 'DependentID', 
-      'CreatedAt',
-    ];
+      // Specify fields to exclude
+      const excludedFields = [
+        "EmpInfoID",
+        "ProjectId",
+        "DepartmentId",
+        "ProdId",
+        "ShiftId",
+        "EducationID",
+        "AddressID",
+        "ContactId",
+        "ShiftID",
+        "DependentID",
+        "CreatedAt",
+      ];
 
-    // Extract headers (field names) dynamically from the first row of data
-    const headers = Object.keys(data[0]).filter(field => !excludedFields.includes(field));
+      // Extract headers (field names) dynamically from the first row of data
+      const headers = Object.keys(data[0]).filter(
+        (field) => !excludedFields.includes(field)
+      );
 
-    // Format date fields and other specific fields
-    const formattedData = data.map((row) => {
-      const formattedRow = {};
-      headers.forEach((field) => {
-        if (['FirstName', 'LastName', 'MiddleName', 'MaidenName', 'EmployeeName', 'DUName', 'DepartmentName', 'ManagerName', 'PMPICIDName', 'EmploymentStatus'].includes(field)) {
-          formattedRow[field] = row[field] ? toTitleCase(row[field]) : '';
-        } else if (field === 'Birthdate' || field === 'DateHired'|| field === 'DateTo' || field === 'DateFrom' || field === 'DateOfBirth' ) {
-          formattedRow[field] = row[field] ? new Date(row[field]).toLocaleDateString() : '';
-        } else if (field === 'EmployeeId') {
-          // Ensure array fields are joined properly
-          formattedRow[field] = Array.isArray(row[field]) ? row[field][0] : row[field];
-        } else {
-          formattedRow[field] = row[field];
-        }
+      // Format date fields and other specific fields
+      const formattedData = data.map((row) => {
+        const formattedRow = {};
+        headers.forEach((field) => {
+          if (
+            [
+              "FirstName",
+              "LastName",
+              "MiddleName",
+              "MaidenName",
+              "EmployeeName",
+              "DUName",
+              "DepartmentName",
+              "ManagerName",
+              "PMPICIDName",
+              "EmploymentStatus",
+            ].includes(field)
+          ) {
+            formattedRow[field] = row[field] ? toTitleCase(row[field]) : "";
+          } else if (
+            field === "Birthdate" ||
+            field === "DateHired" ||
+            field === "DateTo" ||
+            field === "DateFrom" ||
+            field === "DateOfBirth"
+          ) {
+            formattedRow[field] = row[field]
+              ? new Date(row[field]).toLocaleDateString()
+              : "";
+          } else if (field === "EmployeeId") {
+            // Ensure array fields are joined properly
+            formattedRow[field] = Array.isArray(row[field])
+              ? row[field][0]
+              : row[field];
+          } else {
+            formattedRow[field] = row[field];
+          }
+        });
+        return formattedRow;
       });
-      return formattedRow;
-    });
 
-    // Create a worksheet from the formatted data
-    const ws = XLSX.utils.json_to_sheet(formattedData, { header: headers });
+      // Create a worksheet from the formatted data
+      const ws = XLSX.utils.json_to_sheet(formattedData, { header: headers });
 
-    // Auto-adjust column widths based on the longest cell value in each column
-    const maxLengths = headers.map(header => Math.max(
-      ...formattedData.map(row => (row[header] ? row[header].toString().length : 0)),
-      header.length
-    ));
-    ws['!cols'] = maxLengths.map(length => ({ width: length + 2 }));
+      // Auto-adjust column widths based on the longest cell value in each column
+      const maxLengths = headers.map((header) =>
+        Math.max(
+          ...formattedData.map((row) =>
+            row[header] ? row[header].toString().length : 0
+          ),
+          header.length
+        )
+      );
+      ws["!cols"] = maxLengths.map((length) => ({ width: length + 2 }));
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Employees Data Report");
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Employees Data Report");
 
-    // Write the workbook to a file
-    XLSX.writeFile(wb, "Employees_Report.xlsx");
-    alert("File has been successfully downloaded!");
-  } catch (error) {
-    console.error("Error occurred while downloading data:", error);
-    alert("Failed to download data. Please try again.");
-  }
-};
-  
+      // Write the workbook to a file
+      XLSX.writeFile(wb, "Employees_Report.xlsx");
+      alert("File has been successfully downloaded!");
+    } catch (error) {
+      console.error("Error occurred while downloading data:", error);
+      alert("Failed to download data. Please try again.");
+    }
+  };
+
   return (
     <div>
       <div id="wrapper">
@@ -230,12 +273,14 @@ const handleDownloadExcel = async () => {
                         className="btn btn-primary ml-2"
                         onClick={handleDownloadExcel}
                       >
-                       <i className="fas fa-arrow-down"></i>  Employee Reports
+                        <i className="fas fa-arrow-down"></i> Employee Reports
                       </button>
                     </div>
                     <div className="card-body">
                       <div className="d-flex">
-                      <label className="mr-2" style={{ alignSelf: 'center' }}>Filter by:</label>
+                        <label className="mr-2" style={{ alignSelf: "center" }}>
+                          Filter by:
+                        </label>
                         <div className="form-group mr-2">
                           <select
                             className="form-control"
@@ -244,9 +289,11 @@ const handleDownloadExcel = async () => {
                           >
                             <option value="All">All Facility</option>
                             {employees.length > 0 &&
-                              [...new Set(
-                                employees.map((employee) => employee.Facility)
-                              )].map((facility, index) => (
+                              [
+                                ...new Set(
+                                  employees.map((employee) => employee.Facility)
+                                ),
+                              ].map((facility, index) => (
                                 <option key={index} value={facility}>
                                   {facility} Facility
                                 </option>
@@ -261,11 +308,15 @@ const handleDownloadExcel = async () => {
                           >
                             <option value="All">All Statuses</option>
                             {employees.length > 0 &&
-                              [...new Set(
-                                employees.map((employee) => employee.EmployeeStatus)
-                              )].map((empstatus, index) => (
+                              [
+                                ...new Set(
+                                  employees.map(
+                                    (employee) => employee.EmployeeStatus
+                                  )
+                                ),
+                              ].map((empstatus, index) => (
                                 <option key={index} value={empstatus}>
-                                  {empstatus}
+                                  {empstatus} Status
                                 </option>
                               ))}
                           </select>
@@ -313,13 +364,21 @@ const handleDownloadExcel = async () => {
                                   <td>{employee.Facility}</td>
                                   <td>
                                     <span
-                                      className={getStatusColor(employee.EmployeeStatus)}
+                                      className={getStatusColor(
+                                        employee.EmployeeStatus
+                                      )}
                                     >
                                       {employee.EmployeeStatus}
                                     </span>
                                   </td>
                                   <td>{employee.EmploymentStatus}</td>
-                                  <td>{employee.DateHired ? new Date(employee.DateHired).toLocaleDateString() : 'N/A'}</td>
+                                  <td>
+                                    {employee.DateHired
+                                      ? new Date(
+                                          employee.DateHired
+                                        ).toLocaleDateString()
+                                      : "N/A"}
+                                  </td>
                                   <td>{employee.EmployeeRole}</td>
                                   <td>{employee.Position}</td>
                                   <td>{employee.Level}</td>
@@ -328,7 +387,11 @@ const handleDownloadExcel = async () => {
                                   <td>{employee.DUName}</td>
                                   <td>{employee.WorkWeekType}</td>
                                   <td>{employee.WorkArrangement}</td>
-                                  <td>{employee.ShiftCode + " " + employee.ShiftName}</td>
+                                  <td>
+                                    {employee.ShiftCode +
+                                      " " +
+                                      employee.ShiftName}
+                                  </td>
                                   <td>{employee.ShiftType}</td>
                                 </tr>
                               ))

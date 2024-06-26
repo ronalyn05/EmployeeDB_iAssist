@@ -569,65 +569,6 @@ LEFT JOIN CompensationBenefits AS COMPBEN ON PD.EmployeeId = COMPBEN.EmployeeId
 LEFT JOIN Dependent AS DEPDNT ON PD.EmployeeId = DEPDNT.EmployeeId
 LEFT JOIN Product AS PROD ON PD.EmployeeId = PROD.EmployeeId;
     `);
-  //   SELECT 
-  //   PD.EmployeeId,
-  //   PD.FirstName,
-  //   PD.LastName,
-  //   PD.Birthdate,
-  //   PD.MiddleName, 
-  //   PD.MaidenName,
-  //   PD.EmployeeName,
-  //   EI.*,
-  //   ADDRESS.CompleteAddress AS EmContactCompleteAddress,
-  //   ADDRESS.HouseNumber AS EmContactHouseNo,
-  //   ADDRESS.Barangay AS EmContactBarangay,
-  //   ADDRESS.CityMunicipality AS EmContactCityMunicipality,
-  //   ADDRESS.Province AS EmContactProvince,
-  //   ADDRESS.Region AS EmContactRegion,
-  //   ADDRESS.Country AS EmContactCountry,
-  //   ADDRESS.ZipCode AS EmContactZipcode,
-  //   ADDRESS.LandMark AS EmContactLandMark,
-  //   ADDRESS.IsPermanent AS Is_Permanent,
-  //   ADDRESS.IsEmergency AS Is_Emergency,
-  //   CONTACT.ContactNumber AS EmContactPhoneNumber,
-  //   EDUC.*,
-  //   EC.*,        
-  //   DU.DUCode,
-  //   DU.DUName AS DUName,
-  //   DEPT.DepartmentName,
-  //   PROD.*,
-  //   SHFT.*,
-  //   COMPBEN.*,
-  //   DEPDNT.*
-
-  // FROM EmpPersonalDetails AS PD
-  // INNER JOIN EmployeeInfo AS EI ON PD.EmployeeId = EI.EmployeeId
-  // INNER JOIN Address AS ADDRESS ON PD.EmployeeId = ADDRESS.EmployeeId
-  // INNER JOIN Contact AS CONTACT ON PD.EmployeeId = CONTACT.EmployeeId
-  // INNER JOIN Education AS EDUC ON PD.EmployeeId = EDUC.EmployeeId
-  // LEFT JOIN EmergencyContactNumber AS EC ON PD.EmployeeId = EC.EmployeeId
-  // LEFT JOIN DeliveryUnit AS DU ON PD.EmployeeId = DU.EmployeeId
-  // LEFT JOIN Department AS DEPT ON PD.EmployeeId = DEPT.EmployeeId
-  // LEFT JOIN Product AS PROD ON PD.EmployeeId = PROD.EmployeeId
-  // LEFT JOIN Shift AS SHFT ON PD.EmployeeId = SHFT.EmployeeId
-  // LEFT JOIN CompensationBenefits AS COMPBEN ON PD.EmployeeId = COMPBEN.EmployeeId
-  // LEFT JOIN Dependent AS DEPDNT ON PD.EmployeeId = DEPDNT.EmployeeId
-    // // Filter out duplicate employees based on EmployeeId
-    // const employees = result.recordset.reduce((acc, employee) => {
-    //   if (!acc[employee.EmployeeId]) {
-    //     acc[employee.EmployeeId] = employee;
-    //   }
-    //   return acc;
-    // }, {});
-  //   const employees = Object.values(result.recordset.reduce((acc, employee) => {
-  //     if (employee.EmployeeId && !acc[employee.EmployeeId]) {
-  //         acc[employee.EmployeeId] = employee;
-  //     }
-  //     return acc;
-  // }, {}));
-  
-
-  //    return Object.values(employees);
 
      const employees = result.recordset.reduce((acc, employee) => {
       if (employee.EmployeeId && !acc[employee.EmployeeId]) {
@@ -643,7 +584,6 @@ LEFT JOIN Product AS PROD ON PD.EmployeeId = PROD.EmployeeId;
     throw error;
   }
 };
-
 
 // Retrieve new hire employees for the current month
 const getAllCountNewHireEmployees = async () => {
@@ -1377,6 +1317,7 @@ const updateProductById = async (employeeId, updatedEmployeeData) => {
     throw error;
   }
 };
+//function that handles in updating the emergency contact by employee id
 const updateEmergencyContactById = async (employeeId, updatedEmployeeData) => {
   try {
     let pool = await sql.connect(config);
@@ -1693,7 +1634,7 @@ const updatePersonalDetails = async (employeeId, updatedDetails) => {
     throw err;
   }
 };
-
+//fucntion that handles in deleting the data from all table
 const deleteAllFromTable = async (transaction, tableName) => {
   const query = `DELETE FROM ${tableName}`;
   await transaction.request().query(query);
@@ -1942,6 +1883,7 @@ const getHistoryByEmployeeId = async (employeeId) => {
     throw error;
   }
 };
+//function that handles in fetching all the employee details to download as excel file
 const getAllEmployeesToDownload = async () => {
   try {
       let pool = await sql.connect(config);
@@ -2046,8 +1988,6 @@ module.exports = {
   insertCompBen,
   getCompBenByEmployeeId,
   updateCompBenById,
-  // updateEmployeePassword,
-  // updateEmployeeRole,
   addToHistory,
   getEmployeeInfoById,
   checkEmployeeAndEmail,
@@ -2058,5 +1998,4 @@ module.exports = {
   getYearlyNewHireCount,
   getAllEmployees,
   getAllEmployeesToDownload
-  // getExistingEmployeeIds
 };

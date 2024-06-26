@@ -240,18 +240,7 @@ app.post('/getnotificationsforviewall',  upload.single('EmpId'), async (req, res
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-//RONA - EMPLOYEE DB STARTS HERE
+//RONALYN - EMPLOYEE DB STARTS HERE
 // Generate a random string
 const generateRandomString = (length) => {
   return crypto.randomBytes(Math.ceil(length / 2))
@@ -430,7 +419,6 @@ app.post('/login', async (req, res) => {
   }
 });
 
- 
   // Change password endpoint
   app.post('/changePassword', async (req, res) => {
     const { EmployeeId, NewPassword } = req.body;
@@ -986,18 +974,7 @@ app.get('/retrieve/history/:employeeId', async (req, res) => {
   }
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
+//EMPLOYEE DB ENDPOINTS ENDS HERE
 
 
 
